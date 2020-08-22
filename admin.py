@@ -8,8 +8,8 @@ class AlignmentAdmin(admin.ModelAdmin):
     raw_id_fields = ("verse",)    
 
 
-@admin.register(AlignedTranscription)
-class AlignedTranscriptionAdmin(admin.ModelAdmin):
+@admin.register(Row)
+class Row(admin.ModelAdmin):
     raw_id_fields = ("transcription",)    
 
 

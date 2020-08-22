@@ -1,1 +1,105 @@
-hi
+{% extends "dcodex/base_sidebars.html" %}
+{% load static %}
+{% load dcodex_tags %}
+{% load dcodex_collation_tags %}
+
+{% block title %}{{ alignment.family }}: {{alignment.verse}}{% endblock %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="{% static 'dcodex/css/comparison.css' %}" />
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+<style>
+
+.comparison_button {
+    width: 20px;
+    height: 25px;
+}
+</style>
+{% endblock %}
+
+{% block middle %}
+{{ alignment.family }}: {{alignment.verse}}
+
+<div class="container">
+
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                {% for column in alignment.column_set.all %}
+                    <th scope="col">{{column.order}}</th>
+                {% endfor %}
+                <th scope="col">Siglum</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in alignment.row_set.all %}
+                <tr>
+                    {% for column in alignment.column_set.all %}
+                        <td>{{ row|token:column }}</td>
+                    {% endfor %}
+                    <th scope="row"><a href="#" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
+                </tr>
+                {% endfor %}
+                
+            </tbody>
+        </table>
+
+</div>
+
+{% endblock %}
+
+{% block right_sidebar %}
+
+<div id='comparison'></div>
+
+{% endblock %}
+
+
+
+{% block left_sidebar %}
+
+<center>
+    <img src="{% static 'dcodex/images/DCodex-Logo.svg' %}" id='logo' />
+</center>
+
+
+{% endblock %}
+
+
+{% block extra %}
+<div id=hover></div>
+<div id=msHover style='overflow:hidden;'></div>
+{% endblock %}
+
+
+{% block javascript %}
+<script src="{% static 'dcodex/js/jquery.scrollTo.min.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<script src="https://use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+<script>
+var hover_xhr = null;
+function load_comparison(verse_id, manuscript_id, div_name) {
+    $( div_name ).load( "/dcodex/ajax/comparison/", { manuscript_id:manuscript_id, verse_id:verse_id }, function() {
+        $(".mshover").hover(function(){
+            $('#msHover').load("/dcodex/ajax/transcription-mini/", { manuscript_id:$(this).data('manuscriptid'), verse_id:$(this).data('verseid') } );
+            $('#msHover').show();
+        }, function() {
+            $('#msHover').hide();	  
+            $('#msHover').html("");
+        });        
+    } );
+}
+
+$( document ).ready(function() {
+    console.log( "loading from location.html" );
+    load_comparison({{ alignment.verse.id }}, 1, '#comparison' );
+
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}
+{{alignment.family}}
+{{alignment.verse}}

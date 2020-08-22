@@ -83,8 +83,11 @@ def align_family_at_verse(family, verse, gotoh_param):
     print("id_to_word", id_to_word)
     #return
 
+    for order in range( alignment_array.shape[0] ):
+        column, _ = Column.objects.update_or_create( order=order, alignment=alignment, defaults={} )
+
     for transcription, tokens in zip( alignment_transcriptions[-1], np.rollaxis(alignment_array, 1) ):
-        aligned_transcription, _ = AlignedTranscription.objects.update_or_create( transcription=transcription, alignment=alignment, defaults={
+        aligned_transcription, _ = Row.objects.update_or_create( transcription=transcription, alignment=alignment, defaults={
             "tokens": tokens,
         } )
 
@@ -107,7 +110,7 @@ class Alignment(models.Model):
     matrix_data = NDArrayField(help_text="Numpy array for the similarity matrix")
 
 
-class AlignedTranscription(models.Model):
+class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment")
