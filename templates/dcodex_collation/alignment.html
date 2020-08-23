@@ -35,8 +35,8 @@
             <tbody>
                 {% for row in alignment.row_set.all %}
                 <tr>
-                    {% for column in alignment.column_set.all %}
-                        <td>{{ row|token:column }}</td>
+                    {% for column in alignment.column_set.all.reverse %}
+                        <td style="direction: rtl;">{{ row|token:column }}</td>
                     {% endfor %}
                     <th scope="row"><a href="#" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
                 </tr>
