@@ -148,6 +148,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 
     #dn = hierarchy.dendrogram(linkage, orientation='right',labels=[transcription.manuscript.siglum for transcription in transcriptions])
     #plt.show()
+    return alignment
 
 
 class Alignment(models.Model):

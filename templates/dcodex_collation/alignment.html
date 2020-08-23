@@ -15,6 +15,9 @@
     width: 20px;
     height: 25px;
 }
+.hover {
+    background-color: yellow;
+}
 </style>
 {% endblock %}
 
@@ -36,7 +39,7 @@
                 {% for row in alignment.row_set.all %}
                 <tr>
                     {% for column in alignment.column_set.all.reverse %}
-                        <td style="direction: rtl;">{{ row|token:column }}</td>
+                        <td class="token" style="direction: rtl;" data-row="{{ row.id }}" data-column="{{ column.id }}">{{ row|token:column }}</td>
                     {% endfor %}
                     <th scope="row"><a href="#" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
                 </tr>
@@ -98,7 +101,44 @@ $( document ).ready(function() {
     load_comparison({{ alignment.verse.id }}, 1, '#comparison' );
 
     $('[data-toggle="tooltip"]').tooltip();
-});
+
+    $(".token").hover(
+        function() {
+            $( this ).addClass( "hover" );
+        }, function() {
+            $( this ).removeClass( "hover" );
+        });
+    });
+    $(".token").click(function(e){
+        var offset = $(this).offset(); 
+        var relX = e.pageX - offset.left;
+        var clickableWidth = 10;
+        var data = {
+            'row': $(this).data('row'), 
+            'column': $(this).data('column'), 
+            'alignment': {{ alignment.id }}, 
+            }
+        if (relX <= clickableWidth) {
+            data['delta'] = 1;
+        }
+        else if (relX >= $(this).outerWidth() - clickableWidth ) {
+            data['delta'] = -1;
+        }
+        else {
+            return true;
+        }
+        $.ajax({
+            type: "POST",
+            url: "{% url 'shift' %}",
+            data: data,
+            success: function() {   
+                location.reload();  
+            }
+        });
+        return true;
+    });
+
+
 </script>
 {% endblock %}
 {{alignment.family}}
