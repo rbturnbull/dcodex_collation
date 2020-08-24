@@ -157,12 +157,73 @@ class Alignment(models.Model):
     word_to_id = JSONField(help_text="Vocab dictionary")
     id_to_word = NDArrayField(help_text="Index of vocab dictionary")
 
+    def add_column(self, new_column_order):
+        columns = self.column_set.filter( order__gte=new_column_order )
+        for c in columns:
+            c.order += 1
+            c.save()
+        Column(alignment=self, order=new_column_order).save()
+        for row in self.row_set.all():
+            row.tokens = np.insert(row.tokens, new_column_order, -1 )
+            row.save()
+
+    def empty_columns(self):
+        is_empty = None
+        for row in self.row_set.all():
+            row_is_empty = (row.tokens == -1)
+            if is_empty is None:
+                is_empty = row_is_empty
+            else:
+                is_empty &= row_is_empty
+
+        return is_empty
+
+    def clear_empty(self):
+        empty = self.empty_columns()
+        for empty_column_index in np.flip(np.argwhere(empty)[:,0]):
+            self.column_set.filter(order=empty_column_index).delete()
+            columns = self.column_set.filter( order__gt=empty_column_index )
+            for c in columns:
+                c.order -= 1
+                c.save()
+            
+            for row in self.row_set.all():
+                row.tokens = np.delete(row.tokens, empty_column_index )
+                row.save()
+
+    def shift(self, row, column, delta):
+        # if the target column is empty, then just transfer over
+        if row.tokens[ column.order + delta ] != -1:
+            # if the next target column is full, then create new column
+            new_column_order = column.order + delta if delta > 0 else column.order
+            self.add_column( new_column_order )
+
+            # Get the current row and column from the database again because the values have changed.
+            row = Row.objects.get(id=row.id)
+            column = Column.objects.get(id=column.id)
+        
+        row.tokens[ column.order + delta ] = row.tokens[ column.order ]
+        row.tokens[ column.order ] = -1
+        row.save()
+        
+        # Check that no columns are empty
+        self.clear_empty( )
+
+
 
 class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment")
 
+    def token_id_at( self, column ):
+        return self.tokens[column.order]
+
+    def token_at( self, column ):
+        token_id = self.token_id_at( column )
+        if token_id < 0:
+            return ""
+        return self.alignment.id_to_word[ token_id ]        
 
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )

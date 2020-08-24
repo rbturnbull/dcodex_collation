@@ -31,9 +31,6 @@ def shift(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
     delta = int(request.POST.get("delta"))
 
-    if row.tokens[ column.order + delta ] == -1:
-        row.tokens[ column.order + delta ] = row.tokens[ column.order ]
-        row.tokens[ column.order ] = -1
-        row.save()
+    alignment.shift( row, column, delta )
 
     return HttpResponse("OK")
