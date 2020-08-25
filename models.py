@@ -264,6 +264,8 @@ class Row(models.Model):
             return ""
         return self.alignment.id_to_word[ token_id ]        
 
+    def token_strings(self):
+        return [self.alignment.id_to_word[ token_id ] for token_id in self.tokens]
 
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
@@ -276,9 +278,47 @@ class Column(models.Model):
         token_ids = set()
         for row in self.alignment.row_set.all():
             token_ids.update( [row.tokens[self.order]] )
-        return list(token_ids)
+        return sorted(token_ids)
 
     def distinct_tokens_count( self ):
         return len(self.distinct_token_ids())
 
+    def token_id_pairs(self):
+        import itertools
+        token_ids = self.distinct_token_ids()
+        return list(itertools.combinations(token_ids, 2))
         
+    def rows_with_token_id(self, token_id):
+        row_ids = []
+        for row in self.alignment.row_set.all():
+            if row.tokens[self.order] == token_id:
+                row_ids.append(row.id)
+        return Row.objects.filter(id__in=row_ids)
+
+
+class TransitionType(models.Model):
+    name = models.CharField(max_length=255)
+    inverse_name = models.CharField(max_length=255, blank=True, null=True, default=None)
+
+    def __str__(self):
+        if not self.inverse_name:
+            return self.name
+        return f"{self.name} <--> {self.inverse_name}"
+
+    class Meta:
+        ordering = ['name']
+
+
+class Transition(models.Model):
+    column = models.ForeignKey( Column, on_delete=models.CASCADE )
+    transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
+    inverse = models.BooleanField()
+    start_token_id = models.PositiveIntegerField()
+    end_token_id = models.PositiveIntegerField()
+
+
+class AText(models.Model):
+    column = models.ForeignKey( Column, on_delete=models.CASCADE )
+    token_id = models.PositiveIntegerField()
+
+    

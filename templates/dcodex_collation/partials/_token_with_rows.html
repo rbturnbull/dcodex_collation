@@ -1,0 +1,21 @@
+{% load dcodex_collation_tags %}
+
+<p class="token">{{token}}</p>
+{% for row in rows_with_token %}
+    <button class="btn btn-outline-primary" type="button" data-toggle="collapse" data-target="#row-{{row.id}}" aria-expanded="false" aria-controls="collapseExample">
+        {{row.transcription.manuscript.short_name}}
+    </button>
+{% endfor %}
+
+{% for row in rows_with_token %}
+    <div class="collapse" id="row-{{row.id}}">
+        <div class="card card-body">
+            <div>{{row.transcription.manuscript.short_name}}</div>
+            <div class="transcription">
+                {% for c in row.alignment.column_set.all %}
+                    <span {% if c == column %}class="highlight"{%endif%}>{{ row|token:c }}</span> 
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endfor %}

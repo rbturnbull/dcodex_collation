@@ -1,0 +1,124 @@
+{% extends "dcodex/base_sidebars.html" %}
+{% load static %}
+{% load dcodex_tags %}
+{% load dcodex_collation_tags %}
+
+{% block title %}{{ alignment.family }}: {{alignment.verse}}{% endblock %}
+
+{% block stylesheet %}
+<link rel="stylesheet" type="text/css" href="{% static 'dcodex/css/comparison.css' %}" />
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+<style>
+.transcription {
+    direction: rtl;
+}
+.highlight {
+    color: red;
+}
+.token {
+    font-size: 2em;
+    text-align: center;
+    font-color: green;
+}
+.transcription {
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block middle %}
+{{ alignment.family }}: {{alignment.verse}}
+
+<a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=alignment.verse.prev.url_ref %}" class="btn btn-outline-primary">Prev</a>
+<a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=alignment.verse.next.url_ref %}" class="btn btn-outline-primary">Next</a>
+
+<div class="container">
+    <div class="row">
+        <div class="col-5">
+            {% include 'dcodex_collation/partials/_token_with_rows.html' with token=start_token rows_with_token=start_token_rows column=column %}
+        </div>
+        <div class="col-2">
+            <span><i class="fas fa-long-arrow-alt-right"></i></span>
+        </div>
+        <div class="col-5">
+            {% include 'dcodex_collation/partials/_token_with_rows.html' with token=end_token rows_with_token=end_token_rows column=column%}
+        </div>
+    </div>
+
+
+    {% for transition_type in transition_types %}
+        <div>
+        <button type="button" class="btn btn-outline-success transitiontype  {% if transition.transition_type == transition_type and not transition.inverse %} active {% endif %}" data-transitiontype={{transition_type.id}} data-inverse=0>{{transition_type.name}}</button>
+        {% if transition_type.inverse_name %}
+            <button type="button" class="btn btn-outline-success transitiontype {% if transition.transition_type == transition_type and transition.inverse %} active {% endif %}" data-transitiontype={{transition_type.id}} data-inverse=1>{{transition_type.inverse_name}}</button>
+        {% endif %}
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block right_sidebar %}
+
+<div id='comparison'></div>
+
+{% endblock %}
+
+
+
+{% block left_sidebar %}
+
+<center>
+    <img src="{% static 'dcodex/images/DCodex-Logo.svg' %}" id='logo' />
+</center>
+
+
+{% endblock %}
+
+
+{% block extra %}
+<div id=hover></div>
+<div id=msHover style='overflow:hidden;'></div>
+{% endblock %}
+
+
+{% block javascript %}
+<script src="{% static 'dcodex/js/jquery.scrollTo.min.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<script src="https://use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+
+<script>
+var hover_xhr = null;
+
+$( document ).ready(function() {
+    console.log( "loading from location.html" );
+    load_comparison({{ alignment.verse.id }}, 1, '#comparison' );
+
+    $('[data-toggle="tooltip"]').tooltip();
+
+    $(".transitiontype").click(function(e){
+        button=$(this);
+        var data = {
+            'inverse': $(this).data('inverse'), 
+            'transition_type': $(this).data('transitiontype'), 
+            'column': "{{column.id}}", 
+            'start_token_id': "{{start_token_id}}", 
+            'end_token_id': "{{end_token_id}}", 
+            }
+        $.ajax({
+            type: "POST",
+            url: "{% url 'set_transition_type' %}",
+            data: data,
+            success: function() {   
+                $(".transitiontype").removeClass("active");
+                button.addClass("active");
+            }
+        });
+
+    });
+});
+
+</script>
+{% endblock %}
