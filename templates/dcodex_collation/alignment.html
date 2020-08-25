@@ -63,7 +63,7 @@ td {
         <table class="table table-hover">
             <thead>
                 <tr>
-                {% for column in alignment.column_set.all %}
+                {% for column in alignment.column_set.all.reverse %}
                     <th scope="col">{{column.order}}</th>
                 {% endfor %}
                 <th scope="col">Siglum</th>

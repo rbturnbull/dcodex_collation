@@ -9,6 +9,7 @@ from scipy.sparse import lil_matrix
 import matplotlib.pyplot as plt
 from dcodex.models import *
 from dcodex.strings import *
+from django.urls import reverse
 
 def tokenize_string( string ):
     string = string.replace("."," .")
@@ -159,6 +160,9 @@ class Alignment(models.Model):
     word_to_id = JSONField(help_text="Vocab dictionary")
     id_to_word = NDArrayField(help_text="Index of vocab dictionary")
 
+    def get_absolute_url(self):
+        return reverse("alignment_for_family", kwargs={"family_siglum": self.family.name, "verse_ref": self.verse.url_ref() })
+
     def add_column(self, new_column_order):
         columns = self.column_set.filter( order__gte=new_column_order )
         for c in columns:
@@ -295,6 +299,66 @@ class Column(models.Model):
                 row_ids.append(row.id)
         return Row.objects.filter(id__in=row_ids)
 
+    def next_pair( self, pair_rank ):
+        pairs = self.token_id_pairs()
+        
+        # Check pairs on this column
+        if pair_rank + 1 < len(pairs):
+            return self, pair_rank + 1
+
+        # Check pairs on this alignment
+        for column in self.alignment.column_set.filter(order__gt=self.order):
+            pairs = column.token_id_pairs()
+            if len(pairs):
+                return column, 0
+        
+        # Check next alignment
+        for alignment in Alignment.objects.filter( verse__gt=self.alignment.verse ):
+            for column in self.alignment.column_set.all():
+                pairs = column.token_id_pairs()
+                if len(pairs):
+                    return column, 0
+        return None,None
+
+    def prev_pair( self, pair_rank ):
+        pairs = self.token_id_pairs()
+        
+        # Check pairs on this column
+        if pair_rank - 1 >= 0:
+            return self, pair_rank-1
+
+        # Check pairs on this alignment
+        for column in self.alignment.column_set.filter(order__lt=self.order).reverse():
+            pairs = column.token_id_pairs()
+            if len(pairs):
+                return column, len(pairs)-1
+        
+        # Check prev alignment
+        for alignment in Alignment.objects.filter( verse__lt=self.alignment.verse ).reverse():
+            for column in self.alignment.column_set.all().reverse():
+                pairs = column.token_id_pairs()
+                if len(pairs):
+                    return column, len(pairs)-1
+        return None,None        
+
+    def next_pair_url( self, pair_rank ):
+        next_column, next_pair_rank = self.next_pair( pair_rank )
+        return reverse( 'classify_transition_for_pair', kwargs={
+            "family_siglum":self.alignment.family.name,
+            "verse_ref": self.alignment.verse.url_ref(),
+            "column_rank": next_column.order,
+            "pair_rank": next_pair_rank,
+        })
+
+    def prev_pair_url( self, pair_rank ):
+        prev_column, prev_pair_rank = self.prev_pair( pair_rank )
+        return reverse( 'classify_transition_for_pair', kwargs={
+            "family_siglum":self.alignment.family.name,
+            "verse_ref": self.alignment.verse.url_ref(),
+            "column_rank": prev_column.order,
+            "pair_rank": prev_pair_rank,
+        })
+
 
 class TransitionType(models.Model):
     name = models.CharField(max_length=255)
@@ -313,12 +377,12 @@ class Transition(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
     transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
     inverse = models.BooleanField()
-    start_token_id = models.PositiveIntegerField()
-    end_token_id = models.PositiveIntegerField()
+    start_token_id = models.IntegerField()
+    end_token_id = models.IntegerField()
 
 
 class AText(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
-    token_id = models.PositiveIntegerField()
+    token_id = models.IntegerField()
 
     

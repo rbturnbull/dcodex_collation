@@ -70,18 +70,23 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
 
     transition = Transition.objects.filter(column=column, start_token_id=start_token_id, end_token_id=end_token_id ).first()
 
+    next_pair_url = column.next_pair_url( pair_rank )
+    prev_pair_url = column.prev_pair_url( pair_rank )
+
     return render( request, "dcodex_collation/transition.html", context={
         'alignment':alignment,
         'column':column,
         'pair_rank':pair_rank,
-        'start_token':alignment.id_to_word[pair[0]],
-        'end_token':alignment.id_to_word[pair[1]],
+        'start_token':alignment.id_to_word[pair[0]] if pair[0] != GAP else "OMIT",
+        'end_token':alignment.id_to_word[pair[1]] if pair[1] != GAP else "OMIT",
         'start_token_id':start_token_id,
         'end_token_id':end_token_id,
         'transition':transition,
         'start_token_rows':start_token_rows,
         'end_token_rows':end_token_rows,
         'transition_types':TransitionType.objects.all(),
+        'next_pair_url':next_pair_url,
+        'prev_pair_url':prev_pair_url,
         })
 
 

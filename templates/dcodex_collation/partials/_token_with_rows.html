@@ -13,7 +13,7 @@
             <div>{{row.transcription.manuscript.short_name}}</div>
             <div class="transcription">
                 {% for c in row.alignment.column_set.all %}
-                    <span {% if c == column %}class="highlight"{%endif%}>{{ row|token:c }}</span> 
+                    <span class="{% if c == column %}highlight{%endif%}">{{ row|token:c }}</span> 
                 {% endfor %}
             </div>
         </div>
