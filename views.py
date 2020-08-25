@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.views.generic.detail import DetailView
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 
 from .models import *
@@ -30,7 +30,23 @@ def shift(request):
     row = get_object_or_404(Row, id=request.POST.get("row"))
     column = get_object_or_404(Column, id=request.POST.get("column"))
     delta = int(request.POST.get("delta"))
+    maxshift = int(request.POST.get("maxshift"))
 
-    alignment.shift( row, column, delta )
+    if maxshift:
+        alignment.maxshift( row, column, delta )    
+    else:
+        alignment.shift( row, column, delta )
 
     return HttpResponse("OK")
+
+
+def shift_to(request):
+    alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
+    row = get_object_or_404(Row, id=request.POST.get("row"))
+    start_column = get_object_or_404(Column, id=request.POST.get("start_column"))
+    end_column = get_object_or_404(Column, id=request.POST.get("end_column"))
+
+    if alignment.shift_to( row, start_column, end_column ):
+        return HttpResponse("OK")
+    
+    return HttpResponseBadRequest("Cannot shift to this column.")

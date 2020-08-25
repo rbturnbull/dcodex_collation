@@ -27,7 +27,7 @@
     maring: 0px;
 }
 .shift:hover {
-    background-color: orange;
+    background-color: gold;
 }
 
 .shift-left {
@@ -43,6 +43,7 @@
     position: relative;
     margin: 0px;
     padding: 0px;
+    text-align: center;
 }
 td {
     margin: 0px;
@@ -53,6 +54,9 @@ td {
 
 {% block middle %}
 {{ alignment.family }}: {{alignment.verse}}
+
+<a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=alignment.verse.prev.url_ref %}" class="btn btn-outline-primary">Prev</a>
+<a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=alignment.verse.next.url_ref %}" class="btn btn-outline-primary">Next</a>
 
 <div class="container">
 
@@ -69,7 +73,7 @@ td {
                 {% for row in alignment.row_set.all %}
                 <tr>
                     {% for column in alignment.column_set.all.reverse %}
-                        <td class="token" style="direction: rtl;" data-row="{{ row.id }}" data-column="{{ column.id }}"><div class="tokendiv"><div class="shift shift-left"></div>{{ row|token:column }}<div class="shift shift-right"></div></div></td>
+                        <td class="token" style="direction: rtl;" data-row="{{ row.id }}" data-column="{{ column.id }}" {{ row|draggable:column }}><div class="tokendiv" ><div class="shift shift-left"></div>{{ row|token:column }}<div class="shift shift-right"></div></div></td>
                     {% endfor %}
                     <th scope="row"><a href="#" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
                 </tr>
@@ -125,7 +129,30 @@ function load_comparison(verse_id, manuscript_id, div_name) {
         });        
     } );
 }
-
+function shift(element) {
+    var td = element.closest("td")
+    var data = {
+        'row': td.data('row'), 
+        'column': td.data('column'), 
+        'alignment': '{{ alignment.id }}', 
+        'maxshift': 0,
+        }
+    if (element.hasClass("shift-left")) {
+        data['delta'] = 1;
+    }
+    else {
+        data['delta'] = -1;
+    }
+    $.ajax({
+        type: "POST",
+        url: "{% url 'shift' %}",
+        data: data,
+        success: function() {   
+            location.reload();  
+        }
+    });
+    return true;
+}
 $( document ).ready(function() {
     console.log( "loading from location.html" );
     load_comparison({{ alignment.verse.id }}, 1, '#comparison' );
@@ -139,32 +166,44 @@ $( document ).ready(function() {
             $( this ).removeClass( "hover" );
         });
     });
-    $(".shift").click(function(e){
-        var td = $(this).closest("td")
-        var data = {
-            'row': td.data('row'), 
-            'column': td.data('column'), 
-            'alignment': {{ alignment.id }}, 
+    $('.token').on("dragstart", function (event) {
+        var dt = event.originalEvent.dataTransfer;
+        dt.setData('column', $(this).data('column'));
+        dt.setData('row', $(this).data('row'));
+    });
+    $('table td').on("dragenter dragover drop", function (event) {	
+        event.preventDefault();
+        if (event.type === 'drop') {
+            
+            var start_column = event.originalEvent.dataTransfer.getData('column');
+            var start_row = event.originalEvent.dataTransfer.getData('row');
+
+            var end_column = $(this).data('column');
+            var end_row = $(this).data('row');
+
+            if ( end_row != start_row) {
+                return false;
             }
-        if ($(this).hasClass("shift-left")) {
-            data['delta'] = 1;
-        }
-        else {
-            data['delta'] = -1;
-        }
-        $.ajax({
-            type: "POST",
-            url: "{% url 'shift' %}",
-            data: data,
-            success: function() {   
-                location.reload();  
-            }
-        });
-        return true;
+            var data = {
+                'row': end_row, 
+                'start_column': start_column, 
+                'end_column': end_column, 
+                'alignment': '{{ alignment.id }}', 
+                }
+            $.ajax({
+                type: "POST",
+                url: "{% url 'shift_to' %}",
+                data: data,
+                success: function() {   
+                    location.reload();  
+                }
+            });
+        };
     });
 
+    $(".shift").click(function(e){
+        return shift( $(this) );
+    });
 
 </script>
 {% endblock %}
-{{alignment.family}}
-{{alignment.verse}}

@@ -16,6 +16,8 @@ def tokenize_string( string ):
     string = remove_markup(string)
     return string.split()
 
+GAP = -1
+
 def tokenize_strings( transcriptions ):
     return [tokenize_string(transcription.transcription) for transcription in transcriptions]
 
@@ -191,6 +193,26 @@ class Alignment(models.Model):
                 row.tokens = np.delete(row.tokens, empty_column_index )
                 row.save()
 
+    def shift_to( self, row, start_column, end_column ):
+        if start_column.order == end_column.order:
+            return False
+
+        if row.tokens[start_column.order] == GAP:
+            return False
+
+        delta = -1 if start_column.order < end_column.order else 1
+
+        # Ensure that there are all gaps between the two columns
+        for col_order in range( end_column.order, start_column.order, delta ):
+            if row.tokens[col_order] != GAP:
+                return False
+
+        row.tokens[ end_column.order ] = row.tokens[ start_column.order ]
+        row.tokens[ start_column.order ] = GAP
+        row.save()
+        
+        return True
+
     def shift(self, row, column, delta):
         # if the target column is empty, then just transfer over
         if row.tokens[ column.order + delta ] != -1:
@@ -209,6 +231,23 @@ class Alignment(models.Model):
         # Check that no columns are empty
         self.clear_empty( )
 
+    def maxshift(self, row, column, delta, clear=False):
+        this_column_index = column.order
+        if row.tokens[ this_column_index + delta ] != -1:
+            return self.shift( row, column, delta )
+        
+        # Find last empty column in this direction
+        while row.tokens[ this_column_index + delta ] == -1:
+            this_column_index += delta
+
+        row.tokens[ this_column_index ] = row.tokens[ column.order ]
+        row.tokens[ column.order ] = -1
+        row.save()
+        
+        if clear:
+            # Check that no columns are empty
+            self.clear_empty( )
+
 
 
 class Row(models.Model):
@@ -225,6 +264,7 @@ class Row(models.Model):
             return ""
         return self.alignment.id_to_word[ token_id ]        
 
+
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     order = models.PositiveIntegerField("The rank of this column in the alignment")
@@ -232,5 +272,13 @@ class Column(models.Model):
     class Meta:
         ordering = ['order']
 
+    def distinct_token_ids( self ):
+        token_ids = set()
+        for row in self.alignment.row_set.all():
+            token_ids.update( [row.tokens[self.order]] )
+        return list(token_ids)
+
+    def distinct_tokens_count( self ):
+        return len(self.distinct_token_ids())
 
         
