@@ -10,4 +10,4 @@ def token(row, column):
 @register.filter
 def draggable(row, column):
     cell = row.cell_at(column)
-    return "draggable=true" if cell.token else ""
+    return "draggable=true" if cell and cell.token else ""

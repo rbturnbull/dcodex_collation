@@ -124,20 +124,13 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
     
 
 
-    alignment, _ = Alignment.objects.update_or_create( family=family, verse=verse, defaults={
-        "word_to_id": vocab,
-        "id_to_word": id_to_word,
-    } )
-    #alignment = Alignment( family=family, verse=verse )
-    #alignment.save()
-
-    #alignment.word_to_id = vocab
-    #alignment.id_to_word = np.asarray( list(vocab.keys()) )
-
-    id_to_word = np.asarray( list(vocab.keys()) )
-    #print("id_to_word", id_to_word)
-    #return
-
+    alignment, _ = Alignment.objects.update_or_create( family=family, verse=verse )
+    id_to_word = list(vocab.keys())
+    for index, token_text in enumerate(id_to_word):
+        Token.objects.update_or_create( alignment=alignment, text=token_text, defaults={
+            "regularized": normalize_transcription(token_text),
+            "rank": index,
+        })
     
     for order in range( alignment_array.shape[0] ):
         column, _ = Column.objects.update_or_create( order=order, alignment=alignment, defaults={} )
@@ -145,9 +138,30 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 
     Row.objects.filter(alignment=alignment).delete()
     for transcription, tokens in zip( alignment_transcriptions, np.rollaxis(alignment_array, 1) ):
-        aligned_transcription, _ = Row.objects.update_or_create( transcription=transcription, alignment=alignment, defaults={
-            "tokens": tokens,
-        } )
+        row, _ = Row.objects.update_or_create( transcription=transcription, alignment=alignment )
+        for rank, token_id in enumerate(tokens):
+            column = Column.objects.get(alignment=alignment, order=rank)
+
+            print(column)
+            if token_id == -1:
+                token = None
+            else:
+                token_text = id_to_word[token_id]
+                token = Token.objects.get(text=token_text, alignment=alignment)
+
+            # Create State
+            if token and "⧙" in token.text:
+                state = None
+            else:
+                text = token.regularized if token else None
+                state, _ = State.objects.update_or_create( column=column, text=text )
+
+            # Create Cell
+            cell, _ = Cell.objects.update_or_create( row=row, column=column, defaults={
+                'token':token,
+                "state":state,
+            })        
+            #print(cell, row.transcription, column.order, token, state)
 
     #dn = hierarchy.dendrogram(linkage, orientation='right',labels=[transcription.manuscript.siglum for transcription in transcriptions])
     #plt.show()
@@ -159,8 +173,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 class Alignment(models.Model):
     family = models.ForeignKey( Family, on_delete=models.SET_DEFAULT, default=None, null=True, blank=True )
     verse = models.ForeignKey( Verse, on_delete=models.CASCADE )
-    word_to_id = JSONField(help_text="Vocab dictionary")
-    id_to_word = NDArrayField(help_text="Index of vocab dictionary")
+    word_to_id = JSONField(help_text="Vocab dictionary", blank=True, null=True)
+    id_to_word = NDArrayField(help_text="Index of vocab dictionary", blank=True, null=True)
 
     def get_absolute_url(self):
         return reverse("alignment_for_family", kwargs={"family_siglum": self.family.name, "verse_ref": self.verse.url_ref() })
@@ -170,110 +184,101 @@ class Alignment(models.Model):
         for c in columns:
             c.order += 1
             c.save()
-        Column(alignment=self, order=new_column_order).save()
+        column = Column(alignment=self, order=new_column_order)
+        column.save()
+
+        gap_state = column.gap_state()
         for row in self.row_set.all():
-            row.tokens = np.insert(row.tokens, new_column_order, -1 )
-            row.save()
+            Cell( row=row, column=column, state=gap_state, token=None).save()
+
+        return column
 
     def empty_columns(self):
-        is_empty = None
-        for row in self.row_set.all():
-            row_is_empty = (row.tokens == -1)
-            if is_empty is None:
-                is_empty = row_is_empty
-            else:
-                is_empty &= row_is_empty
-
-        return is_empty
+        return np.asarray( [column.is_empty() for column in self.column_set.all()] )
 
     def clear_empty(self):
-        empty = self.empty_columns()
-        for empty_column_index in np.flip(np.argwhere(empty)[:,0]):
-            self.column_set.filter(order=empty_column_index).delete()
-            columns = self.column_set.filter( order__gt=empty_column_index )
-            for c in columns:
-                c.order -= 1
-                c.save()
-            
-            for row in self.row_set.all():
-                row.tokens = np.delete(row.tokens, empty_column_index )
-                row.save()
+        for column in self.column_set.all():
+            if column.is_empty():
+                #import logging
+                #logging.warning("column empty"+ str(column.order))
+                column.delete()
 
     def shift_to( self, row, start_column, end_column ):
+        import logging
         if start_column.order == end_column.order:
+            logging.warning("columns equal")
             return False
 
-        if row.tokens[start_column.order] == GAP:
+        start_cell = row.cell_at(start_column)
+        if start_cell.token == None:
+            logging.warning("cannot find start cell")
             return False
 
         delta = -1 if start_column.order < end_column.order else 1
 
         # Ensure that there are all gaps between the two columns
-        for col_order in range( end_column.order, start_column.order, delta ):
-            if row.tokens[col_order] != GAP:
-                return False
+        if start_column.order < end_column.order:
+            intermediate = row.cell_set.filter( column__order__gt=start_column.order, column__order__lte=end_column.order )
+        else:    
+            intermediate = row.cell_set.filter( column__order__lt=start_column.order, column__order__gte=end_column.order )
+        
+        if intermediate.exclude(token=None).count() > 0:
+            logging.warning("intermediate cells not empty")
+            return False
 
-        row.tokens[ end_column.order ] = row.tokens[ start_column.order ]
-        row.tokens[ start_column.order ] = GAP
-        row.save()
+        target_cell = row.cell_at(end_column)
+        gap_state = target_cell.state
+        target_cell.token = start_cell.token
+        target_cell.state = start_cell.state
+        target_cell.save()
+
+        start_cell.state = gap_state
+        start_cell.token = None
+        start_cell.save()
         
         return True
 
     def shift(self, row, column, delta):
         # if the target column is empty, then just transfer over
-        if row.tokens[ column.order + delta ] != -1:
+        target_cell = Cell.objects.get(column__order=column.order + delta, row=row)
+        if target_cell.token:
             # if the next target column is full, then create new column
             new_column_order = column.order + delta if delta > 0 else column.order
-            self.add_column( new_column_order )
+            new_column = self.add_column( new_column_order )
 
-            # Get the current row and column from the database again because the values have changed.
-            row = Row.objects.get(id=row.id)
+            # Get the objects from database again because the values have changed.
+            target_cell = Cell.objects.get(column=new_column, row=row)
             column = Column.objects.get(id=column.id)
         
-        row.tokens[ column.order + delta ] = row.tokens[ column.order ]
-        row.tokens[ column.order ] = -1
-        row.save()
+        gap_state = target_cell.state
+        start_cell = row.cell_at(column)
+        target_cell.token = start_cell.token
+        target_cell.state = start_cell.state
+        target_cell.save()
+
+        start_cell.state = gap_state
+        start_cell.token = None
+        start_cell.save()
         
         # Check that no columns are empty
         self.clear_empty( )
-
-    def maxshift(self, row, column, delta, clear=False):
-        this_column_index = column.order
-        if row.tokens[ this_column_index + delta ] != -1:
-            return self.shift( row, column, delta )
-        
-        # Find last empty column in this direction
-        while row.tokens[ this_column_index + delta ] == -1:
-            this_column_index += delta
-
-        row.tokens[ this_column_index ] = row.tokens[ column.order ]
-        row.tokens[ column.order ] = -1
-        row.save()
-        
-        if clear:
-            # Check that no columns are empty
-            self.clear_empty( )
-
-
 
 
 class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
-    tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment")
+    tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment", blank=True, null=True)
 
     def token_id_at( self, column ):
-        return self.tokens[column.order]
+        self.cell_at(column)
+        if cell:
+            return cell.token
 
     def token_at( self, column ):
         token_id = self.token_id_at( column )
         if token_id < 0:
             return ""
         return self.alignment.id_to_word[ token_id ]        
-
-    def token_strings(self):
-        return [self.alignment.id_to_word[ token_id ] for token_id in self.tokens]
-
 
     def cell_at(self, column):
         return self.cell_set.filter(column=column).first()
@@ -290,6 +295,13 @@ class Column(models.Model):
 
     class Meta:
         ordering = ['order']
+
+    def is_empty(self):
+        return self.cell_set.exclude(token=None).count() == 0
+
+    def gap_state(self):
+        state, _ = State.objects.get_or_create(column=self)
+        return state
 
     def states(self):
         if self.hasattr( 'states' ):
@@ -393,7 +405,9 @@ class State(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
 
     def __str__(self):
-        return self.text
+        if self.text:
+            return self.text
+        return "OMIT"
 
 
 class Token(models.Model):

@@ -30,12 +30,7 @@ def shift(request):
     row = get_object_or_404(Row, id=request.POST.get("row"))
     column = get_object_or_404(Column, id=request.POST.get("column"))
     delta = int(request.POST.get("delta"))
-    maxshift = int(request.POST.get("maxshift"))
-
-    if maxshift:
-        alignment.maxshift( row, column, delta )    
-    else:
-        alignment.shift( row, column, delta )
+    alignment.shift( row, column, delta )
 
     return HttpResponse("OK")
 
