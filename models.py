@@ -304,31 +304,14 @@ class Column(models.Model):
         return state
 
     def states(self):
-        if self.hasattr( 'states' ):
-            return self.states
-
-        self.states = []
-        self.row_to_state = {}
-        for row in self.alignment.row_set.all():
-            token = row.token_at(self.order)
-            if '⧙' in token:
-                self.row_to_state[row.id] = None
-                continue
-
-            regularized_token = normalize_transcription(token)
-            if regularized_token not in self.states:
-                self.states.append( regularized_token )
-            
-            self.row_to_state[row.id] = self.states.index(regularized_token)
-            
-        return self.states
+        return State.objects.filter(cell__column=self).distinct()
 
     def states_count(self):
         return len(self.states())
 
     def state_pairs(self):
         import itertools
-        states = self.states()
+        states = list(self.states())
         return list(itertools.combinations(states, 2))
 
     def rows_with_state(self, state):
@@ -405,16 +388,29 @@ class State(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
 
     def __str__(self):
+        cell = self.cells().first()
+        if cell and cell.token:
+            return str(cell.token)
+
         if self.text:
             return self.text
         return "OMIT"
 
+    def rows(self):
+        return Row.objects.filter(cell__state=self).all()
+
+    def cells(self):
+        return Cell.objects.filter(state=self).all()
+    
 
 class Token(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     text = models.CharField(max_length=255, help_text="The characters of this token/word as they appear in the manuscript text.")
     regularized = models.CharField(max_length=255, help_text="A regularized form of the text of this token.")
     rank = models.PositiveIntegerField()
+
+    def __str__(self):
+        return self.text
 
 class Cell(models.Model):
     row = models.ForeignKey( Row, on_delete=models.CASCADE )
@@ -440,12 +436,12 @@ class Transition(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
     transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
     inverse = models.BooleanField()
-    start_state = models.CharField(max_length=255)
-    end_state = models.CharField(max_length=255)
+    start_state = models.ForeignKey( State, on_delete=models.CASCADE, related_name="start_state" )
+    end_state = models.ForeignKey( State, on_delete=models.CASCADE, related_name="end_state" )
 
 
 class AText(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
-    state = models.CharField(max_length=255)
+    state = models.ForeignKey( State, on_delete=models.CASCADE )
 
     

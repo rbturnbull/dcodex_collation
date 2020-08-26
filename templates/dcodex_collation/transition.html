@@ -13,7 +13,7 @@
 .highlight {
     color: red;
 }
-.token {
+.state {
     font-size: 4em;
     text-align: center;
     font-color: green;
@@ -38,13 +38,13 @@
 <div class="container">
     <div class="row">
         <div class="col-5">
-            {% include 'dcodex_collation/partials/_token_with_rows.html' with token=start_token rows_with_token=start_token_rows column=column %}
+            {% include 'dcodex_collation/partials/_state_with_rows.html' with state=start_state column=column %}
         </div>
         <div class="col-2">
-            <span class=token><i class="fas fa-long-arrow-alt-right"></i></span>
+            <span class=state><i class="fas fa-long-arrow-alt-right"></i></span>
         </div>
         <div class="col-5">
-            {% include 'dcodex_collation/partials/_token_with_rows.html' with token=end_token rows_with_token=end_token_rows column=column%}
+            {% include 'dcodex_collation/partials/_state_with_rows.html' with state=end_state column=column%}
         </div>
     </div>
 
@@ -107,8 +107,8 @@ $( document ).ready(function() {
             'inverse': $(this).data('inverse'), 
             'transition_type': $(this).data('transitiontype'), 
             'column': "{{column.id}}", 
-            'start_token_id': "{{start_token_id}}", 
-            'end_token_id': "{{end_token_id}}", 
+            'start_state_id': "{{start_state.id}}", 
+            'end_state_id': "{{end_state.id}}", 
             }
         $.ajax({
             type: "POST",

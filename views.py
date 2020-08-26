@@ -53,6 +53,8 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
     column = get_object_or_404(Column, alignment=alignment, order=column_rank )
 
     pairs = column.state_pairs()
+    import logging
+    logging.warning(pairs)
     if pair_rank >= len(pairs):
         return HttpResponseBadRequest(f"Rank for pair {pair_rank} too high.")
     pair = pairs[pair_rank]
@@ -60,10 +62,7 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
     start_state = pair[0]
     end_state = pair[1]
 
-    start_token_rows = column.rows_with_token_id( start_token_id )
-    end_token_rows = column.rows_with_token_id( end_token_id )
-
-    transition = Transition.objects.filter(column=column, start_token_id=start_token_id, end_token_id=end_token_id ).first()
+    transition = Transition.objects.filter(column=column, start_state=start_state, end_state=end_state ).first()
 
     next_pair_url = column.next_pair_url( pair_rank )
     prev_pair_url = column.prev_pair_url( pair_rank )
@@ -72,13 +71,9 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
         'alignment':alignment,
         'column':column,
         'pair_rank':pair_rank,
-        'start_token':alignment.id_to_word[pair[0]] if pair[0] != GAP else "OMIT",
-        'end_token':alignment.id_to_word[pair[1]] if pair[1] != GAP else "OMIT",
-        'start_token_id':start_token_id,
-        'end_token_id':end_token_id,
+        'start_state':start_state,
+        'end_state':end_state,
         'transition':transition,
-        'start_token_rows':start_token_rows,
-        'end_token_rows':end_token_rows,
         'transition_types':TransitionType.objects.all(),
         'next_pair_url':next_pair_url,
         'prev_pair_url':prev_pair_url,
@@ -89,10 +84,10 @@ def set_transition_type(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
     transition_type = get_object_or_404(TransitionType, id=request.POST.get("transition_type"))
     inverse = request.POST.get("inverse")
-    start_token_id = request.POST.get("start_token_id")
-    end_token_id = request.POST.get("end_token_id")
+    start_state = get_object_or_404(State, id=request.POST.get("start_state_id"))
+    end_state = get_object_or_404(State, id=request.POST.get("end_state_id"))
 
-    Transition.objects.update_or_create( column=column, start_token_id=start_token_id, end_token_id=end_token_id, defaults={
+    Transition.objects.update_or_create( column=column, start_state=start_state, end_state=end_state, defaults={
         'transition_type': transition_type,
         'inverse': inverse,
     })
