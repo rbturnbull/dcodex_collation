@@ -57,13 +57,13 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
     alignment = get_object_or_404(Alignment, verse=verse, family=family )
     column = get_object_or_404(Column, alignment=alignment, order=column_rank )
 
-    pairs = column.token_id_pairs()
+    pairs = column.state_pairs()
     if pair_rank >= len(pairs):
         return HttpResponseBadRequest(f"Rank for pair {pair_rank} too high.")
     pair = pairs[pair_rank]
 
-    start_token_id = pair[0]
-    end_token_id=pair[1]
+    start_state = pair[0]
+    end_state = pair[1]
 
     start_token_rows = column.rows_with_token_id( start_token_id )
     end_token_rows = column.rows_with_token_id( end_token_id )

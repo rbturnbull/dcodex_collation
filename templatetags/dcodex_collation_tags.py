@@ -5,8 +5,9 @@ register = template.Library()
 
 @register.filter
 def token(row, column):
-    return row.token_at( column )
+    return row.text_at( column )
 
 @register.filter
 def draggable(row, column):
-    return "draggable=true" if row.token_id_at( column ) >= 0 else ""
+    cell = row.cell_at(column)
+    return "draggable=true" if cell.token else ""

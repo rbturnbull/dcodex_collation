@@ -154,6 +154,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
     return alignment
 
 
+    
+
 class Alignment(models.Model):
     family = models.ForeignKey( Family, on_delete=models.SET_DEFAULT, default=None, null=True, blank=True )
     verse = models.ForeignKey( Verse, on_delete=models.CASCADE )
@@ -254,6 +256,7 @@ class Alignment(models.Model):
 
 
 
+
 class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
@@ -271,6 +274,16 @@ class Row(models.Model):
     def token_strings(self):
         return [self.alignment.id_to_word[ token_id ] for token_id in self.tokens]
 
+
+    def cell_at(self, column):
+        return self.cell_set.filter(column=column).first()
+
+    def text_at(self, column):
+        cell = self.cell_at(column)
+        if cell and cell.token and cell.token.text:
+            return cell.token.text
+        return ""
+
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     order = models.PositiveIntegerField("The rank of this column in the alignment")
@@ -278,29 +291,41 @@ class Column(models.Model):
     class Meta:
         ordering = ['order']
 
-    def distinct_token_ids( self ):
-        token_ids = set()
+    def states(self):
+        if self.hasattr( 'states' ):
+            return self.states
+
+        self.states = []
+        self.row_to_state = {}
         for row in self.alignment.row_set.all():
-            token_ids.update( [row.tokens[self.order]] )
-        return sorted(token_ids)
+            token = row.token_at(self.order)
+            if '⧙' in token:
+                self.row_to_state[row.id] = None
+                continue
 
-    def distinct_tokens_count( self ):
-        return len(self.distinct_token_ids())
+            regularized_token = normalize_transcription(token)
+            if regularized_token not in self.states:
+                self.states.append( regularized_token )
+            
+            self.row_to_state[row.id] = self.states.index(regularized_token)
+            
+        return self.states
 
-    def token_id_pairs(self):
+    def states_count(self):
+        return len(self.states())
+
+    def state_pairs(self):
         import itertools
-        token_ids = self.distinct_token_ids()
-        return list(itertools.combinations(token_ids, 2))
-        
-    def rows_with_token_id(self, token_id):
-        row_ids = []
-        for row in self.alignment.row_set.all():
-            if row.tokens[self.order] == token_id:
-                row_ids.append(row.id)
+        states = self.states()
+        return list(itertools.combinations(states, 2))
+
+    def rows_with_state(self, state):
+        self.states()
+        row_ids = [row_id for row_id in self.row_to_state if self.row_to_state[row_id] == state]
         return Row.objects.filter(id__in=row_ids)
 
     def next_pair( self, pair_rank ):
-        pairs = self.token_id_pairs()
+        pairs = self.state_pairs()
         
         # Check pairs on this column
         if pair_rank + 1 < len(pairs):
@@ -308,20 +333,20 @@ class Column(models.Model):
 
         # Check pairs on this alignment
         for column in self.alignment.column_set.filter(order__gt=self.order):
-            pairs = column.token_id_pairs()
+            pairs = column.state_pairs()
             if len(pairs):
                 return column, 0
         
         # Check next alignment
         for alignment in Alignment.objects.filter( verse__gt=self.alignment.verse ):
             for column in self.alignment.column_set.all():
-                pairs = column.token_id_pairs()
+                pairs = column.state_pairs()
                 if len(pairs):
                     return column, 0
         return None,None
 
     def prev_pair( self, pair_rank ):
-        pairs = self.token_id_pairs()
+        pairs = self.state_pairs()
         
         # Check pairs on this column
         if pair_rank - 1 >= 0:
@@ -329,20 +354,22 @@ class Column(models.Model):
 
         # Check pairs on this alignment
         for column in self.alignment.column_set.filter(order__lt=self.order).reverse():
-            pairs = column.token_id_pairs()
+            pairs = column.state_pairs()
             if len(pairs):
                 return column, len(pairs)-1
         
         # Check prev alignment
         for alignment in Alignment.objects.filter( verse__lt=self.alignment.verse ).reverse():
             for column in self.alignment.column_set.all().reverse():
-                pairs = column.token_id_pairs()
+                pairs = column.state_pairs()
                 if len(pairs):
                     return column, len(pairs)-1
         return None,None        
 
     def next_pair_url( self, pair_rank ):
         next_column, next_pair_rank = self.next_pair( pair_rank )
+        if next_column is None and next_pair_rank is None:
+            return ""
         return reverse( 'classify_transition_for_pair', kwargs={
             "family_siglum":self.alignment.family.name,
             "verse_ref": self.alignment.verse.url_ref(),
@@ -352,6 +379,8 @@ class Column(models.Model):
 
     def prev_pair_url( self, pair_rank ):
         prev_column, prev_pair_rank = self.prev_pair( pair_rank )
+        if prev_column is None and prev_pair_rank is None:
+            return ""
         return reverse( 'classify_transition_for_pair', kwargs={
             "family_siglum":self.alignment.family.name,
             "verse_ref": self.alignment.verse.url_ref(),
@@ -359,7 +388,27 @@ class Column(models.Model):
             "pair_rank": prev_pair_rank,
         })
 
+class State(models.Model):
+    text = models.CharField(max_length=255, blank=True, null=True, help_text="A regularized form for the text of this state.")
+    column = models.ForeignKey( Column, on_delete=models.CASCADE )
 
+    def __str__(self):
+        return self.text
+
+
+class Token(models.Model):
+    alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
+    text = models.CharField(max_length=255, help_text="The characters of this token/word as they appear in the manuscript text.")
+    regularized = models.CharField(max_length=255, help_text="A regularized form of the text of this token.")
+    rank = models.PositiveIntegerField()
+
+class Cell(models.Model):
+    row = models.ForeignKey( Row, on_delete=models.CASCADE )
+    column = models.ForeignKey( Column, on_delete=models.CASCADE )
+    token = models.ForeignKey( Token, on_delete=models.CASCADE, blank=True, null=True )
+    state = models.ForeignKey( State, on_delete=models.CASCADE, blank=True, null=True )
+
+    
 class TransitionType(models.Model):
     name = models.CharField(max_length=255)
     inverse_name = models.CharField(max_length=255, blank=True, null=True, default=None)
@@ -377,12 +426,12 @@ class Transition(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
     transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
     inverse = models.BooleanField()
-    start_token_id = models.IntegerField()
-    end_token_id = models.IntegerField()
+    start_state = models.CharField(max_length=255)
+    end_state = models.CharField(max_length=255)
 
 
 class AText(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
-    token_id = models.IntegerField()
+    state = models.CharField(max_length=255)
 
     

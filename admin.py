@@ -16,3 +16,5 @@ class Row(admin.ModelAdmin):
 admin.site.register(Column)
 admin.site.register(TransitionType)
 admin.site.register(Transition)
+admin.site.register(Cell)
+admin.site.register(State)
