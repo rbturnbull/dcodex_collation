@@ -24,6 +24,12 @@ def alignment_for_family(request, family_siglum, verse_ref):
     #return HttpResponse(str(family.id))
     return render( request, "dcodex_collation/alignment.html", context={'alignment':alignment})
 
+def clear_empty(request):
+    alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
+    alignment.clear_empty( )
+    return HttpResponse("OK")
+
+
 def shift(request):
 
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))

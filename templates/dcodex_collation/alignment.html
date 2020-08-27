@@ -81,7 +81,7 @@ td {
                 
             </tbody>
         </table>
-
+        <button class="btn btn-outline-danger clearempty" type="button" >Clear Empty Columns</button>
 </div>
 
 {% endblock %}
@@ -142,6 +142,7 @@ function shift(element) {
     });
     return true;
 }
+
 $( document ).ready(function() {
     console.log( "loading from location.html" );
     load_comparison({{ alignment.verse.id }}, 1, '#comparison' );
@@ -159,14 +160,15 @@ $( document ).ready(function() {
         var dt = event.originalEvent.dataTransfer;
         dt.setData('column', $(this).data('column'));
         dt.setData('row', $(this).data('row'));
+        //dt.setData('cell', $(this).data('cell') );
     });
     $('table td').on("dragenter dragover drop", function (event) {	
         event.preventDefault();
         if (event.type === 'drop') {
-            
+            var td = $(this)
             var start_column = event.originalEvent.dataTransfer.getData('column');
             var start_row = event.originalEvent.dataTransfer.getData('row');
-
+            
             var end_column = $(this).data('column');
             var end_row = $(this).data('row');
 
@@ -184,7 +186,14 @@ $( document ).ready(function() {
                 url: "{% url 'shift_to' %}",
                 data: data,
                 success: function() {   
-                    location.reload();  
+                    var start_td = $("[data-row='"+start_row+"'][data-column='"+start_column+"']");
+                    start_td.removeClass( "hover" );
+                    start_td.attr('draggable', 'False');
+                    td.html( start_td.html() );
+                    start_td.html("");
+                    td.attr('draggable', 'True');
+
+                    //location.reload();  
                 }
             });
         };
@@ -193,6 +202,21 @@ $( document ).ready(function() {
     $(".shift").click(function(e){
         return shift( $(this) );
     });
+    $(".clearempty").click(function(e){
+        var data = {
+            'alignment': '{{ alignment.id }}', 
+            }
+        $.ajax({
+            type: "POST",
+            url: "{% url 'clear_empty' %}",
+            data: data,
+            success: function() {   
+                location.reload();  
+            }
+        });
+        return true;
+    });
+
 
 </script>
 {% endblock %}

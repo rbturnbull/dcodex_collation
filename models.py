@@ -13,11 +13,16 @@ from django.urls import reverse
 
 def tokenize_string( string ):
     string = string.replace("."," .")
+    string = string.replace(":"," :")
+    string = string.replace(","," ,")
     string = re.sub("\s+"," ", string)
     string = remove_markup(string)
     return string.split()
 
 GAP = -1
+
+def get_gap_state():
+    return State.objects.filter(text=None).first()
 
 def tokenize_strings( transcriptions ):
     return [tokenize_string(transcription.transcription) for transcription in transcriptions]
@@ -131,6 +136,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
             "regularized": normalize_transcription(token_text),
             "rank": index,
         })
+
+    print(alignment_array)
     
     for order in range( alignment_array.shape[0] ):
         column, _ = Column.objects.update_or_create( order=order, alignment=alignment, defaults={} )
@@ -142,7 +149,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         for rank, token_id in enumerate(tokens):
             column = Column.objects.get(alignment=alignment, order=rank)
 
-            print(column)
+            #print(column)
             if token_id == -1:
                 token = None
             else:
@@ -154,7 +161,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
                 state = None
             else:
                 text = token.regularized if token else None
-                state, _ = State.objects.update_or_create( column=column, text=text )
+                state, _ = State.objects.update_or_create( text=text )
 
             # Create Cell
             cell, _ = Cell.objects.update_or_create( row=row, column=column, defaults={
@@ -187,7 +194,7 @@ class Alignment(models.Model):
         column = Column(alignment=self, order=new_column_order)
         column.save()
 
-        gap_state = column.gap_state()
+        gap_state = get_gap_state()
         for row in self.row_set.all():
             Cell( row=row, column=column, state=gap_state, token=None).save()
 
@@ -197,11 +204,19 @@ class Alignment(models.Model):
         return np.asarray( [column.is_empty() for column in self.column_set.all()] )
 
     def clear_empty(self):
-        for column in self.column_set.all():
+        to_delete = []
+        for column in self.column_set.all().reverse():
             if column.is_empty():
-                #import logging
-                #logging.warning("column empty"+ str(column.order))
-                column.delete()
+                import logging
+                logging.warning("column empty"+ str(column.order))
+                for c in list(self.column_set.filter(order__gt=column.order)):
+                    #logging.warning("shifting " + str(c.order))
+                    #continue
+
+                    c.order -= 1
+                    c.save()
+                to_delete.append( column.id )
+        Column.objects.filter(id__in=to_delete).delete()
 
     def shift_to( self, row, start_column, end_column ):
         import logging
@@ -227,12 +242,11 @@ class Alignment(models.Model):
             return False
 
         target_cell = row.cell_at(end_column)
-        gap_state = target_cell.state
         target_cell.token = start_cell.token
         target_cell.state = start_cell.state
         target_cell.save()
 
-        start_cell.state = gap_state
+        start_cell.state = get_gap_state()
         start_cell.token = None
         start_cell.save()
         
@@ -250,18 +264,18 @@ class Alignment(models.Model):
             target_cell = Cell.objects.get(column=new_column, row=row)
             column = Column.objects.get(id=column.id)
         
-        gap_state = target_cell.state
+
         start_cell = row.cell_at(column)
         target_cell.token = start_cell.token
         target_cell.state = start_cell.state
         target_cell.save()
 
-        start_cell.state = gap_state
+        start_cell.state = get_gap_state()
         start_cell.token = None
         start_cell.save()
         
         # Check that no columns are empty
-        self.clear_empty( )
+        #self.clear_empty( )
 
 
 class Row(models.Model):
@@ -284,10 +298,20 @@ class Row(models.Model):
         return self.cell_set.filter(column=column).first()
 
     def text_at(self, column):
+        #return str(column.order)
         cell = self.cell_at(column)
-        if cell and cell.token and cell.token.text:
+        if not cell:
+            return "ERROR"
+        if cell.token and cell.token.text:
             return cell.token.text
         return ""
+
+    def state_at(self,column):
+        cell = self.cell_at(column)
+        if cell:
+            return cell.state
+        return None
+
 
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
@@ -299,14 +323,10 @@ class Column(models.Model):
     def is_empty(self):
         return self.cell_set.exclude(token=None).count() == 0
 
-    def gap_state(self):
-        state, _ = State.objects.get_or_create(column=self)
-        return state
-
     def states(self):
         return State.objects.filter(cell__column=self).distinct()
 
-    def states_count(self):
+    def state_count(self):
         return len(self.states())
 
     def state_pairs(self):
@@ -385,7 +405,7 @@ class Column(models.Model):
 
 class State(models.Model):
     text = models.CharField(max_length=255, blank=True, null=True, help_text="A regularized form for the text of this state.")
-    column = models.ForeignKey( Column, on_delete=models.CASCADE )
+    #column = models.ForeignKey( Column, on_delete=models.CASCADE )
 
     def __str__(self):
         cell = self.cells().first()
