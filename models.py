@@ -334,10 +334,12 @@ class Column(models.Model):
         states = list(self.states())
         return list(itertools.combinations(states, 2))
 
+    def cells_with_state(self, state):
+        return Cell.objects.filter(column=self, state=state)
+    
     def rows_with_state(self, state):
-        self.states()
-        row_ids = [row_id for row_id in self.row_to_state if self.row_to_state[row_id] == state]
-        return Row.objects.filter(id__in=row_ids)
+        cells = self.cells_with_state(state)
+        return Row.objects.filter(cell__in=cells)
 
     def next_pair( self, pair_rank ):
         pairs = self.state_pairs()

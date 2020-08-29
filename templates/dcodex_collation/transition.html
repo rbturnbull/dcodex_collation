@@ -24,6 +24,9 @@
     font-size: 1.5em;
     direction: rtl;
 }
+[data-column="{{column.id}}"] {
+    background-color: yellow;
+}
 </style>
 {% endblock %}
 
@@ -36,6 +39,9 @@
 
 
 <div class="container">
+    {% include 'dcodex_collation/partials/_alignment_table.html' with alignment=alignment %}
+
+
     <div class="row">
         <div class="col-5">
             {% include 'dcodex_collation/partials/_state_with_rows.html' with state=start_state column=column %}

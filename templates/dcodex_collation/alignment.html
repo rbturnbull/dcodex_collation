@@ -49,6 +49,9 @@ td {
     margin: 0px;
     padding: 0px;
 }
+th {
+    text-align: center;
+}
 </style>
 {% endblock %}
 
@@ -60,27 +63,7 @@ td {
 
 <div class="container">
 
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                {% for column in alignment.column_set.all.reverse %}
-                    <th scope="col">{{column.order}}</th>
-                {% endfor %}
-                <th scope="col">Siglum</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in alignment.row_set.all %}
-                <tr>
-                    {% for column in alignment.column_set.all.reverse %}
-                        <td class="token" style="direction: rtl;" data-row="{{ row.id }}" data-column="{{ column.id }}" {{ row|draggable:column }}><div class="tokendiv" ><div class="shift shift-left"></div>{{ row|token:column }}<div class="shift shift-right"></div></div></td>
-                    {% endfor %}
-                    <th scope="row"><a href="#" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
-                </tr>
-                {% endfor %}
-                
-            </tbody>
-        </table>
+        {% include 'dcodex_collation/partials/_alignment_table.html' with alignment=alignment %}
         <button class="btn btn-outline-danger clearempty" type="button" >Clear Empty Columns</button>
 </div>
 
