@@ -70,7 +70,10 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
 
     transition = Transition.objects.filter(column=column, start_state=start_state, end_state=end_state ).first()
 
+
     next_pair_url = column.next_pair_url( pair_rank )
+    next_untagged_pair_url = column.next_untagged_pair_url( pair_rank )
+
     prev_pair_url = column.prev_pair_url( pair_rank )
 
     return render( request, "dcodex_collation/transition.html", context={
@@ -82,6 +85,7 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
         'transition':transition,
         'transition_types':TransitionType.objects.all(),
         'next_pair_url':next_pair_url,
+        'next_untagged_pair_url':next_untagged_pair_url,
         'prev_pair_url':prev_pair_url,
         })
 
@@ -98,3 +102,33 @@ def set_transition_type(request):
         'inverse': inverse,
     })
     return HttpResponse("OK")
+
+def set_atext(request):
+    column = get_object_or_404(Column, id=request.POST.get("column"))
+    state = get_object_or_404(State, id=request.POST.get("state"))
+    column.atext = state
+    column.save()
+    return HttpResponse("OK")
+
+def remove_atext(request):
+    column = get_object_or_404(Column, id=request.POST.get("column"))
+    state = get_object_or_404(State, id=request.POST.get("state"))
+    if column.atext != state:
+        HttpResponseBadRequest("Incorrect state for A-Text on this column.")
+
+    column.atext = None
+    column.save()
+
+    return HttpResponse("OK")    
+
+def save_atext_notes(request):
+    column = get_object_or_404(Column, id=request.POST.get("column"))
+    state = get_object_or_404(State, id=request.POST.get("state"))
+    if column.atext != state:
+        HttpResponseBadRequest("Incorrect state for A-Text on this column.")
+
+    column.atext_notes = request.POST.get("notes")
+    column.save()
+
+    return HttpResponse("OK")    
+

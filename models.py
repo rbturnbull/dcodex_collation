@@ -30,7 +30,7 @@ def tokenize_strings( transcriptions ):
 def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2):
     transcriptions = list(family.transcriptions_at(verse))
 
-    #transcriptions = [t for t in transcriptions if t.manuscript.siglum in ["J67_esk", "S128_esk", "CSA"]]
+    transcriptions = [t for t in transcriptions if '_' not in t.verse.url_ref()] # hack for certain lectionaries
 
     # Distance matrix
     distance_matrix_as_vector = []
@@ -183,6 +183,9 @@ class Alignment(models.Model):
     word_to_id = JSONField(help_text="Vocab dictionary", blank=True, null=True)
     id_to_word = NDArrayField(help_text="Index of vocab dictionary", blank=True, null=True)
 
+    def __str__(self):
+        return f"{self.family} - {self.verse}"
+
     def get_absolute_url(self):
         return reverse("alignment_for_family", kwargs={"family_siglum": self.family.name, "verse_ref": self.verse.url_ref() })
 
@@ -312,13 +315,45 @@ class Row(models.Model):
             return cell.state
         return None
 
+class State(models.Model):
+    text = models.CharField(max_length=255, blank=True, null=True, help_text="A regularized form for the text of this state.")
+
+    def __str__(self):
+        cell = self.cells().first()
+        if cell and cell.token:
+            return str(cell.token)
+
+        if self.text:
+            return self.text
+        return "OMIT"
+
+    def rows(self):
+        return Row.objects.filter(cell__state=self).all()
+
+    def cells(self):
+        return Cell.objects.filter(state=self).all()
 
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     order = models.PositiveIntegerField("The rank of this column in the alignment")
+    atext = models.ForeignKey( State, on_delete=models.SET_DEFAULT, null=True, blank=True, default=None )
+    atext_notes = models.TextField(default=None, null=True, blank=True)
 
     class Meta:
         ordering = ['order']
+
+    def __str__(self):
+        return f"{self.alignment}:{self.order}"
+
+    def get_transition(self, start_state, end_state):
+        transition = self.transition_set.filter(start_state=start_state, end_state=end_state).first()
+        if transition:
+            return transition
+        inverse_transition = self.transition_set.filter(start_state=end_state, end_state=start_state).first()
+        if inverse_transition:
+            return inverse_transition.create_inverse()
+        return None
+
 
     def is_empty(self):
         return self.cell_set.exclude(token=None).count() == 0
@@ -355,12 +390,30 @@ class Column(models.Model):
                 return column, 0
         
         # Check next alignment
-        for alignment in Alignment.objects.filter( verse__gt=self.alignment.verse ):
-            for column in self.alignment.column_set.all():
+        for alignment in Alignment.objects.filter( verse__id__gt=self.alignment.verse.id ):
+            for column in alignment.column_set.all():
                 pairs = column.state_pairs()
                 if len(pairs):
                     return column, 0
         return None,None
+
+    def transition_for_pair( self, pair_rank ):
+        pairs = self.state_pairs()
+        if pair_rank >= len(pairs):
+            return None
+        pair = pairs[pair_rank]
+        start_state = pair[0]
+        end_state = pair[1]
+        return Transition.objects.filter(column=self, start_state=start_state, end_state=end_state ).first()
+
+
+    def next_untagged_pair( self, pair_rank ):
+        column = self
+        transition = True
+        while column is not None and transition is not None:
+            column, pair_rank = column.next_pair( pair_rank )
+            transition = column.transition_for_pair(pair_rank)
+        return column, pair_rank
 
     def prev_pair( self, pair_rank ):
         pairs = self.state_pairs()
@@ -377,52 +430,40 @@ class Column(models.Model):
         
         # Check prev alignment
         for alignment in Alignment.objects.filter( verse__lt=self.alignment.verse ).reverse():
-            for column in self.alignment.column_set.all().reverse():
+            for column in alignment.column_set.all().reverse():
                 pairs = column.state_pairs()
                 if len(pairs):
                     return column, len(pairs)-1
         return None,None        
 
-    def next_pair_url( self, pair_rank ):
-        next_column, next_pair_rank = self.next_pair( pair_rank )
-        if next_column is None and next_pair_rank is None:
+    def pair_url( self, pair_rank ):
+        if pair_rank is None:
             return ""
         return reverse( 'classify_transition_for_pair', kwargs={
             "family_siglum":self.alignment.family.name,
             "verse_ref": self.alignment.verse.url_ref(),
-            "column_rank": next_column.order,
-            "pair_rank": next_pair_rank,
+            "column_rank": self.order,
+            "pair_rank": pair_rank,
         })
+
+    def next_pair_url( self, pair_rank ):
+        next_column, next_pair_rank = self.next_pair( pair_rank )
+        if next_column is None:
+            return ""
+        return next_column.pair_url( next_pair_rank )
+
+    def next_untagged_pair_url( self, pair_rank ):
+        next_column, next_pair_rank = self.next_untagged_pair( pair_rank )
+        if next_column is None:
+            return ""
+        return next_column.pair_url( next_pair_rank )
 
     def prev_pair_url( self, pair_rank ):
         prev_column, prev_pair_rank = self.prev_pair( pair_rank )
         if prev_column is None and prev_pair_rank is None:
             return ""
-        return reverse( 'classify_transition_for_pair', kwargs={
-            "family_siglum":self.alignment.family.name,
-            "verse_ref": self.alignment.verse.url_ref(),
-            "column_rank": prev_column.order,
-            "pair_rank": prev_pair_rank,
-        })
+        return prev_column.pair_url( prev_pair_rank )
 
-class State(models.Model):
-    text = models.CharField(max_length=255, blank=True, null=True, help_text="A regularized form for the text of this state.")
-    #column = models.ForeignKey( Column, on_delete=models.CASCADE )
-
-    def __str__(self):
-        cell = self.cells().first()
-        if cell and cell.token:
-            return str(cell.token)
-
-        if self.text:
-            return self.text
-        return "OMIT"
-
-    def rows(self):
-        return Row.objects.filter(cell__state=self).all()
-
-    def cells(self):
-        return Cell.objects.filter(state=self).all()
     
 
 class Token(models.Model):
@@ -440,7 +481,14 @@ class Cell(models.Model):
     token = models.ForeignKey( Token, on_delete=models.CASCADE, blank=True, null=True )
     state = models.ForeignKey( State, on_delete=models.CASCADE, blank=True, null=True )
 
-    
+    class Meta:
+        ordering = ['column', 'row']
+
+    def token_display(self):
+        if self.token:
+            return str(self.token)
+        return ""
+
 class TransitionType(models.Model):
     name = models.CharField(max_length=255)
     inverse_name = models.CharField(max_length=255, blank=True, null=True, default=None)
@@ -449,6 +497,9 @@ class TransitionType(models.Model):
         if not self.inverse_name:
             return self.name
         return f"{self.name} <--> {self.inverse_name}"
+
+    def str_with_direction(self, is_inverse):
+        return self.inverse_name if is_inverse and self.inverse_name else self.name
 
     class Meta:
         ordering = ['name']
@@ -461,9 +512,54 @@ class Transition(models.Model):
     start_state = models.ForeignKey( State, on_delete=models.CASCADE, related_name="start_state" )
     end_state = models.ForeignKey( State, on_delete=models.CASCADE, related_name="end_state" )
 
+    def __str__(self):
+        t = self.transition_type_str()
+        return f"'{self.start_state}' → '{self.end_state}' ({t})"
 
-class AText(models.Model):
-    column = models.ForeignKey( Column, on_delete=models.CASCADE )
-    state = models.ForeignKey( State, on_delete=models.CASCADE )
+    def transition_type_str(self):
+        return self.transition_type.str_with_direction(self.inverse)
 
-    
+    def inverse_transition_type_str(self):
+        return self.transition_type.str_with_direction(not self.inverse)
+
+    def create_inverse(self):
+        return Transition(column=self.column, transition_type=self.transition_type, inverse=(not self.inverse), start_state=self.end_state, end_state=self.start_state)
+
+
+class Rate(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+    def symbol(self):
+        return self.name.replace(" ","")
+
+
+class RateSystem(models.Model):
+    name = models.CharField(max_length=255)
+    default_rate = models.ForeignKey( Rate, on_delete=models.SET_DEFAULT, default=None, blank=True, null=True )
+
+    def __str__(self):
+        return self.name
+
+    def get_transition_rate(self, transition):
+        transition_rate = self.transitionrate_set.filter(transition_type=transition.transition_type, inverse=transition.inverse).first()
+        if transition_rate:
+            return transition_rate
+        
+        transition_rate = self.transitionrate_set.filter(transition_type=transition.transition_type, inverse=None).first()
+        if transition_rate:
+            return transition_rate
+
+        return self.default_rate
+
+class TransitionRate(models.Model):
+    system = models.ForeignKey( RateSystem, on_delete=models.CASCADE )
+    rate = models.ForeignKey( Rate, on_delete=models.CASCADE )
+    transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
+    inverse = models.BooleanField(default=None, blank=True, null=True, help_text="If None, then the rate applies in both directions.")
+
+    def __str__(self):
+        transition_string = self.transition_type.str_with_direction(self.inverse) if self.inverse else str(self.transition_type)
+        return f"'{transition_string}' at rate '{self.rate}' in '{self.system}'"

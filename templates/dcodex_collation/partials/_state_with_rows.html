@@ -1,6 +1,7 @@
 {% load dcodex_collation_tags %}
 
 <p class="state">{{state}}</p>
+
 {% for row in column|rows_with_state:state %}
     <button class="btn btn-outline-primary" type="button" data-toggle="collapse" data-target="#row-{{row.id}}" aria-expanded="false" aria-controls="collapseExample">
         {{row.transcription.manuscript.short_name}}

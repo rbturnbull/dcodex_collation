@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
 <style>
+.footer{
+    height: 500px;
+}
 .highlight {
     color: red;
 }
@@ -24,8 +27,27 @@
     font-size: 1.5em;
     direction: rtl;
 }
-[data-column="{{column.id}}"] {
-    background-color: yellow;
+th {
+    text-align: center;
+}
+.token {
+    position: relative;
+    margin: 0px;
+    padding: 0px;
+    text-align: center;
+}
+td {
+    margin: 0px;
+    padding: 0px;
+}
+td[data-column="{{column.id}}"] {
+    background-color: lightgrey;
+}
+td[data-column="{{column.id}}"][data-state="{{start_state.id}}"] {
+    background-color: pink;
+}
+td[data-column="{{column.id}}"][data-state="{{end_state.id}}"] {
+    background-color: lightgreen;
 }
 </style>
 {% endblock %}
@@ -33,9 +55,10 @@
 {% block middle %}
 {{ alignment.family }}: {{alignment.verse}}
 
-<a href="{{ alignment.get_absolute_url }}" class="btn btn-outline-primary">Alignment</a>
-<a href="{{ prev_pair_url }}" class="btn btn-outline-primary">Prev</a>
-<a href="{{ next_pair_url }}" class="btn btn-outline-primary">Next</a>
+<a href="{{ alignment.get_absolute_url }}" class="btn btn-outline-primary chk-saved">Alignment</a>
+<a href="{{ prev_pair_url }}" class="btn btn-outline-primary chk-saved">Prev</a>
+<a href="{{ next_pair_url }}" class="btn btn-outline-primary chk-saved">Next</a>
+<a href="{{ next_untagged_pair_url }}" class="btn btn-outline-primary chk-saved">Next Untagged</a>
 
 
 <div class="container">
@@ -44,18 +67,24 @@
 
     <div class="row">
         <div class="col-5">
-            {% include 'dcodex_collation/partials/_state_with_rows.html' with state=start_state column=column %}
+            {% include 'dcodex_collation/partials/_state_with_atext.html' with state=start_state column=column %}
         </div>
         <div class="col-2">
             <span class=state><i class="fas fa-long-arrow-alt-right"></i></span>
         </div>
         <div class="col-5">
-            {% include 'dcodex_collation/partials/_state_with_rows.html' with state=end_state column=column%}
+            {% include 'dcodex_collation/partials/_state_with_atext.html' with state=end_state column=column%}
         </div>
     </div>
 
     <hr>
+    <a href="{{ prev_pair_url }}" class="btn btn-outline-primary chk-saved">Prev</a>
+    <a href="{{ next_pair_url }}" class="btn btn-outline-primary chk-saved">Next</a>
+    <a href="{{ next_untagged_pair_url }}" class="btn btn-outline-primary chk-saved">Next Untagged</a>
 
+
+    <input class="form-control" type="text" placeholder="Search Transition Types" id="search">
+    <div class="transitiontypes">
     {% for transition_type in transition_types %}
         <div>
         <button type="button" class="btn btn-outline-success transitiontype  {% if transition.transition_type == transition_type and not transition.inverse %} active {% endif %}" data-transitiontype={{transition_type.id}} data-inverse=0>{{transition_type.name}}</button>
@@ -64,8 +93,10 @@
         {% endif %}
         </div>
     {% endfor %}
+    </div>
 </div>
-
+<div class="footer">
+</div>
 {% endblock %}
 
 {% block right_sidebar %}
@@ -97,15 +128,92 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 <script src="https://use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
+<script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
 
 <script>
 var hover_xhr = null;
 
 $( document ).ready(function() {
-    console.log( "loading from location.html" );
+    console.log( "loading from transition.html" );
+    var unsaved = false;
+
     load_comparison({{ alignment.verse.id }}, 1, '#comparison' );
+    $('.chk-saved').click(function(e) {
+        if (unsaved) {
+            alert("You have unsaved changes.");
+            return false;
+        }
+        return true;
+        
+	});
+
+    $("#search").change(function(){ //triggers change in all input fields including text type
+        var search_text = $("#search").val().toLowerCase();
+        //alert(search_text);
+        var regex = "/"+search_text+"/gi";
+        console.log(regex);
+        $(".transitiontypes").isotope({ filter: function() {
+            var name = $(this).find('.transitiontype').text().toLowerCase();
+            //alert(name);
+            console.log(name);
+            console.log(name.search( search_text ));
+
+            return name.search( search_text ) > -1;
+        } });
+    });
+
 
     $('[data-toggle="tooltip"]').tooltip();
+    $(".atext-notes").change(function(){ //triggers change in all input fields including text type
+        unsaved = true;
+    });
+
+    $(".atext-notes-save").click(function(e){
+        var data = {
+            'column': '{{ column.id }}', 
+            'state': $(this).data('state'), 
+            'notes': $("#info"+$(this).data('state')).val(),
+        }
+        $.ajax({
+            type: "POST",
+            url: "{% url 'save_atext_notes' %}",
+            data: data,
+            success: function() {   
+                unsaved = false;
+            }
+        });
+    });
+    $(".atext").click(function(e){
+        btn = $(this);
+        var data = {
+            'column': '{{ column.id }}', 
+            'state': $(this).data('state'), 
+        }
+        if ($(this).hasClass("btn-danger")) {
+            $.ajax({
+                type: "POST",
+                url: "{% url 'remove_atext' %}",
+                data: data,
+                success: function() {   
+                    $(".atext").removeClass("btn-danger");
+                    $(".atext").addClass("btn-outline-danger");
+                }
+            });
+        }
+        else {
+            $.ajax({
+                type: "POST",
+                url: "{% url 'set_atext' %}",
+                data: data,
+                success: function() {  
+                    $(".atext").removeClass("btn-danger");
+                    $(".atext").addClass("btn-outline-danger");
+                    btn.addClass("btn-danger");
+                    btn.removeClass("btn-outline-danger");
+                }
+            });
+        }
+    });
 
     $(".transitiontype").click(function(e){
         button=$(this);
@@ -123,7 +231,10 @@ $( document ).ready(function() {
             success: function() {   
                 $(".transitiontype").removeClass("active");
                 button.addClass("active");
-            }
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+                alert("Could not set transition type.");
+            },
         });
 
     });

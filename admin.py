@@ -18,3 +18,7 @@ admin.site.register(TransitionType)
 admin.site.register(Transition)
 admin.site.register(Cell)
 admin.site.register(State)
+
+admin.site.register(TransitionRate)
+admin.site.register(Rate)
+admin.site.register(RateSystem)
