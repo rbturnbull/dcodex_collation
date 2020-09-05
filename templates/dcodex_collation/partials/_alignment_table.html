@@ -5,7 +5,7 @@
             <thead>
                 <tr>
                 {% for column in alignment.column_set.all.reverse %}
-                    <th scope="col" >{{column.order}}</th>
+                    <th scope="col" ><a href="{% url 'classify_transition_for_pair' family_siglum=alignment.family.name verse_ref=alignment.verse.url_ref column_rank=column.order pair_rank=0%}">{{column.order}}</a></th>
                 {% endfor %}
                 <th scope="col">Siglum</th>
                 </tr>

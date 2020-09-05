@@ -53,13 +53,14 @@ td[data-column="{{column.id}}"][data-state="{{end_state.id}}"] {
 {% endblock %}
 
 {% block middle %}
+<!--
 {{ alignment.family }}: {{alignment.verse}}
 
 <a href="{{ alignment.get_absolute_url }}" class="btn btn-outline-primary chk-saved">Alignment</a>
 <a href="{{ prev_pair_url }}" class="btn btn-outline-primary chk-saved">Prev</a>
 <a href="{{ next_pair_url }}" class="btn btn-outline-primary chk-saved">Next</a>
 <a href="{{ next_untagged_pair_url }}" class="btn btn-outline-primary chk-saved">Next Untagged</a>
-
+-->
 
 <div class="container">
     {% include 'dcodex_collation/partials/_alignment_table.html' with alignment=alignment %}
@@ -78,6 +79,7 @@ td[data-column="{{column.id}}"][data-state="{{end_state.id}}"] {
     </div>
 
     <hr>
+    <a href="{{ alignment.get_absolute_url }}" class="btn btn-outline-primary chk-saved">Alignment</a>
     <a href="{{ prev_pair_url }}" class="btn btn-outline-primary chk-saved">Prev</a>
     <a href="{{ next_pair_url }}" class="btn btn-outline-primary chk-saved">Next</a>
     <a href="{{ next_untagged_pair_url }}" class="btn btn-outline-primary chk-saved">Next Untagged</a>
@@ -231,6 +233,7 @@ $( document ).ready(function() {
             success: function() {   
                 $(".transitiontype").removeClass("active");
                 button.addClass("active");
+                window.location = "{{ next_untagged_pair_url }}";
             },
             error: function(XMLHttpRequest, textStatus, errorThrown) {
                 alert("Could not set transition type.");

@@ -62,7 +62,11 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
     import logging
     logging.warning(pairs)
     if pair_rank >= len(pairs):
-        return HttpResponseBadRequest(f"Rank for pair {pair_rank} too high.")
+        column, pair_rank = column.next_pair(pair_rank)
+        pairs = column.state_pairs()
+
+    if pair_rank is None:
+        return HttpResponseBadRequest(f"Cannot find pair.")
     pair = pairs[pair_rank]
 
     start_state = pair[0]

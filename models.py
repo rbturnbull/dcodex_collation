@@ -29,7 +29,6 @@ def tokenize_strings( transcriptions ):
 
 def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2):
     transcriptions = list(family.transcriptions_at(verse))
-
     transcriptions = [t for t in transcriptions if '_' not in t.verse.url_ref()] # hack for certain lectionaries
 
     # Distance matrix
@@ -315,6 +314,7 @@ class Row(models.Model):
             return cell.state
         return None
 
+
 class State(models.Model):
     text = models.CharField(max_length=255, blank=True, null=True, help_text="A regularized form for the text of this state.")
 
@@ -332,6 +332,7 @@ class State(models.Model):
 
     def cells(self):
         return Cell.objects.filter(state=self).all()
+
 
 class Column(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
@@ -354,6 +355,12 @@ class Column(models.Model):
             return inverse_transition.create_inverse()
         return None
 
+    def only_punctuation(self):
+        states = self.states()
+        for state in states:
+            if state.text not in [None, ""]:
+                return False
+        return True
 
     def is_empty(self):
         return self.cell_set.exclude(token=None).count() == 0
@@ -406,6 +413,12 @@ class Column(models.Model):
         end_state = pair[1]
         return Transition.objects.filter(column=self, start_state=start_state, end_state=end_state ).first()
 
+    def set_transition(self,start_state, end_state, transition_type, inverse):
+        transition, _ = Transition.objects.update_or_create( column=self, start_state=start_state, end_state=end_state, defaults={
+            'transition_type': transition_type,
+            'inverse': inverse,
+        })
+        return transition
 
     def next_untagged_pair( self, pair_rank ):
         column = self

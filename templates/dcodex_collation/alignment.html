@@ -11,6 +11,9 @@
 
 <style>
 
+.highlight-column {
+    background-color: #eeeeee;    
+}
 .comparison_button {
     width: 20px;
     height: 25px;
@@ -134,8 +137,12 @@ $( document ).ready(function() {
 
     $(".token").hover(
         function() {
+            var column = $(this).data('column');
+            $('[data-column="'+column+'"]').addClass( "highlight-column" );
             $( this ).addClass( "hover" );
         }, function() {
+            var column = $(this).data('column');
+            $('[data-column="'+column+'"]').removeClass( "highlight-column" );
             $( this ).removeClass( "hover" );
         });
     });
