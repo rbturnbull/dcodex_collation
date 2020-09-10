@@ -1,7 +1,7 @@
 {% load dcodex_tags %}
 {% load dcodex_collation_tags %}
 
-<p class="state">{{state}}</p>
+<p class="state">{{state|state_str_at:column}}</p>
     <button class="btn atext {% if state == column.atext %}btn-danger{% else %}btn-outline-danger{%endif%}" data-state="{{ state.id }}" type="button" data-toggle="collapse" data-target="#atext-notes-{{state.id}}" aria-expanded="false" aria-controls="collapseExample">
     A Text
     </button>

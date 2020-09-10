@@ -327,11 +327,20 @@ class State(models.Model):
             return self.text
         return "OMIT"
 
+    def str_at(self, column):
+        cell = self.cells_at(column).first()
+        if cell and cell.token:
+            return str(cell.token)
+        return str(self)
+        
     def rows(self):
-        return Row.objects.filter(cell__state=self).all()
+        return Row.objects.filter(cell__state=self)
 
     def cells(self):
-        return Cell.objects.filter(state=self).all()
+        return Cell.objects.filter(state=self)
+
+    def cells_at(self, column):
+        return self.cells().filter(column=column)
 
 
 class Column(models.Model):

@@ -9,14 +9,17 @@ class AlignmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(Row)
-class Row(admin.ModelAdmin):
+class RowAdmin(admin.ModelAdmin):
     raw_id_fields = ("transcription",)    
+
+@admin.register(Cell)
+class CellAdmin(admin.ModelAdmin):
+    raw_id_fields = ("token","state",)    
 
 
 admin.site.register(Column)
 admin.site.register(TransitionType)
 admin.site.register(Transition)
-admin.site.register(Cell)
 admin.site.register(State)
 
 admin.site.register(TransitionRate)

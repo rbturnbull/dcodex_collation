@@ -16,3 +16,6 @@ def draggable(row, column):
     cell = row.cell_at(column)
     return "draggable=true" if cell and cell.token else ""
 
+@register.filter
+def state_str_at(state, column):
+    return state.str_at(column)
