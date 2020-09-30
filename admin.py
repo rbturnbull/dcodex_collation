@@ -17,12 +17,29 @@ class CellAdmin(admin.ModelAdmin):
     raw_id_fields = ("token","state",)    
 
 
+class TransitionTypeInline(admin.TabularInline):
+    model = TransitionType
+    extra = 0
+    
+class TransitionRateInline(admin.TabularInline):
+    model = TransitionRate
+    extra = 0
+    
+@admin.register(TransitionRate)    
+class TransitionRateAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(RateSystem)    
+class RateSystemAdmin(admin.ModelAdmin):
+    inlines = [TransitionRateInline,]
+
+
+
 admin.site.register(Column)
 admin.site.register(TransitionType)
 admin.site.register(Transition)
 admin.site.register(State)
-
-admin.site.register(TransitionRate)
 admin.site.register(Rate)
-admin.site.register(RateSystem)
+
 admin.site.register(Token)
