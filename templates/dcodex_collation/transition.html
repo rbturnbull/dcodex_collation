@@ -109,14 +109,6 @@ td[data-column="{{column.id}}"][data-state="{{end_state.id}}"] {
 
 
 
-{% block left_sidebar %}
-
-<center>
-    <img src="{% static 'dcodex/images/DCodex-Logo.svg' %}" id='logo' />
-</center>
-
-
-{% endblock %}
 
 
 {% block extra %}
@@ -244,4 +236,23 @@ $( document ).ready(function() {
 });
 
 </script>
+{% endblock %}
+
+{% block left_sidebar %}
+
+<center>
+    <img src="{% static 'dcodex/images/DCodex-Logo.svg' %}" id='logo' />
+</center>
+
+<div id="sidebar_cards">
+    {% for alignment_for_family in alignments_for_family %}
+        <div class="sidebar_card {% if alignment_for_family.id == alignment.id %}sidebar_card_selected{% endif %}" id="alignment{{ collation_location.id }}">
+            <div>
+                <a href="{% url 'classify_transition_for_pair' alignment.family.name alignment_for_family.verse.url_ref 0 0 %}">{{alignment_for_family.verse.reference_abbreviation}}</a> 
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+
 {% endblock %}

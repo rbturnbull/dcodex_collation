@@ -11,6 +11,8 @@
 
 <style>
 
+
+
 .highlight-column {
     background-color: #eeeeee;    
 }
@@ -85,6 +87,16 @@ th {
 <center>
     <img src="{% static 'dcodex/images/DCodex-Logo.svg' %}" id='logo' />
 </center>
+
+<div id="sidebar_cards">
+    {% for alignment_for_family in alignments_for_family %}
+        <div class="sidebar_card {% if alignment_for_family.id == alignment.id %}sidebar_card_selected{% endif %}" id="alignment{{ collation_location.id }}">
+            <div>
+                <a href="{% url 'alignment_for_family' alignment.family.name alignment_for_family.verse.url_ref %}">{{alignment_for_family.verse.reference_abbreviation}}</a> 
+            </div>
+        </div>
+    {% endfor %}
+</div>
 
 
 {% endblock %}

@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import *
 from dcodex.models import *
-from dcodex_bible.models import *
+
 
 class AlignmentDetailView(DetailView):
     model = Alignment
@@ -13,7 +13,8 @@ class AlignmentDetailView(DetailView):
 
 
 def alignment_for_family(request, family_siglum, verse_ref):
-    verse = BibleVerse.get_from_string(verse_ref)
+    family = get_object_or_404(Family, name=family_siglum)
+    verse = family.get_verse_from_string( verse_ref )
     family = get_object_or_404(Family, name=family_siglum)
 
     alignment = Alignment.objects.filter( verse=verse, family=family ).first()
@@ -22,7 +23,7 @@ def alignment_for_family(request, family_siglum, verse_ref):
         alignment = align_family_at_verse( family, verse, gotoh_param )    
 
     #return HttpResponse(str(family.id))
-    return render( request, "dcodex_collation/alignment.html", context={'alignment':alignment})
+    return render( request, "dcodex_collation/alignment.html", context={'alignment':alignment, 'alignments_for_family': Alignment.objects.filter( family=family )})
 
 def clear_empty(request):
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
@@ -53,8 +54,8 @@ def shift_to(request):
     return HttpResponseBadRequest("Cannot shift to this column.")
 
 def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank, pair_rank):
-    verse = BibleVerse.get_from_string(verse_ref)
     family = get_object_or_404(Family, name=family_siglum)
+    verse = family.get_verse_from_string( verse_ref )
     alignment = get_object_or_404(Alignment, verse=verse, family=family )
     column = get_object_or_404(Column, alignment=alignment, order=column_rank )
 
@@ -91,6 +92,7 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
         'next_pair_url':next_pair_url,
         'next_untagged_pair_url':next_untagged_pair_url,
         'prev_pair_url':prev_pair_url,
+        'alignments_for_family': Alignment.objects.filter( family=family ),
         })
 
 

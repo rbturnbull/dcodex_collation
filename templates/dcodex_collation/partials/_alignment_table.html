@@ -4,19 +4,33 @@
         <table class="table table-hover">
             <thead>
                 <tr>
-                {% for column in alignment.column_set.all.reverse %}
+                {% if not alignment.is_rtl %}
+                    <th scope="col">Siglum</th>
+                {% endif %}
+
+                {% for column in alignment.column_set_display_order %}
                     <th scope="col" ><a href="{% url 'classify_transition_for_pair' family_siglum=alignment.family.name verse_ref=alignment.verse.url_ref column_rank=column.order pair_rank=0%}">{{column.order}}</a></th>
                 {% endfor %}
-                <th scope="col">Siglum</th>
+                {% if alignment.is_rtl %}
+                    <th scope="col">Siglum</th>
+                {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for row in alignment.row_set.all %}
                 <tr>
-                    {% for cell in row.cell_set.all.reverse %}
+                    {% if not lignment.is_rtl %}
+                        <th scope="row"><a href="/dcodex/ms/{{ row.transcription.manuscript.siglum }}/{{ row.transcription.verse.url_ref }}/" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
+                    {% endif %}
+
+                    {% for cell in row.cell_set_display_order %}
                         <td class="token" style="direction: rtl;" data-row="{{ row.id }}" data-column="{{ cell.column.id }}" data-cell="{{ cell.id }}"  data-state="{{ cell.state.id }}" {% if cell.token %}draggable=true{% endif %}><div class="tokendiv" ><div class="shift shift-left"></div>{{ cell.token_display }}<div class="shift shift-right"></div></div></td>
                     {% endfor %}
-                    <th scope="row"><a href="/dcodex/ms/{{ row.transcription.manuscript.siglum }}/{{ row.transcription.verse.url_ref }}/" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
+
+                    {% if lignment.is_rtl %}
+                        <th scope="row"><a href="/dcodex/ms/{{ row.transcription.manuscript.siglum }}/{{ row.transcription.verse.url_ref }}/" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
+                    {% endif %}
+
                 </tr>
                 {% endfor %}
                 

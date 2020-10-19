@@ -11,13 +11,6 @@ from dcodex.models import *
 from dcodex.strings import *
 from django.urls import reverse
 
-def tokenize_string( string ):
-    string = string.replace("."," .")
-    string = string.replace(":"," :")
-    string = string.replace(","," ,")
-    string = re.sub("\s+"," ", string)
-    string = remove_markup(string)
-    return string.split()
 
 GAP = -1
 
@@ -25,7 +18,7 @@ def get_gap_state():
     return State.objects.filter(text=None).first()
 
 def tokenize_strings( transcriptions ):
-    return [tokenize_string(transcription.transcription) for transcription in transcriptions]
+    return [transcription.tokenize() for transcription in transcriptions]
 
 def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2):
     transcriptions = list(family.transcriptions_at(verse))
@@ -34,11 +27,11 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
     # Distance matrix
     distance_matrix_as_vector = []
     for x_index, x in enumerate(transcriptions):
-        x_string = normalize_transcription(x.transcription)
+        x_string = x.normalize()
         for y_index, y in enumerate(transcriptions):
             if y_index >= x_index:
                 break
-            y_string = normalize_transcription(y.transcription)
+            y_string = y.normalize()
             distance = gotoh_counts.nonmatches( x_string, y_string, *gotoh_param )
             distance_matrix_as_vector.append( distance )
 
@@ -182,11 +175,24 @@ class Alignment(models.Model):
     word_to_id = JSONField(help_text="Vocab dictionary", blank=True, null=True)
     id_to_word = NDArrayField(help_text="Index of vocab dictionary", blank=True, null=True)
 
+    class Meta:
+        ordering = ['family', 'verse']
+
     def __str__(self):
         return f"{self.family} - {self.verse}"
 
     def get_absolute_url(self):
         return reverse("alignment_for_family", kwargs={"family_siglum": self.family.name, "verse_ref": self.verse.url_ref() })
+
+    def is_rtl(self):
+        row = self.row_set.first()
+        return row.is_rtl()
+
+    def column_set_display_order(self):
+        if self.is_rtl():
+            return self.column_set.all().reverse()
+        return self.column_set.all()
+
 
     def add_column(self, new_column_order):
         columns = self.column_set.filter( order__gte=new_column_order )
@@ -284,6 +290,15 @@ class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment", blank=True, null=True)
+
+    def is_rtl(self):
+        return False
+        return row.is_rtl()
+
+    def cell_set_display_order(self):
+        if self.is_rtl():
+            return self.cell_set.all().reverse()
+        return self.cell_set.all()
 
     def token_id_at( self, column ):
         self.cell_at(column)
