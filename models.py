@@ -292,7 +292,7 @@ class Row(models.Model):
     tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment", blank=True, null=True)
 
     def is_rtl(self):
-        return False
+        return self.transcription.manuscript.text_direction == TextDirection.RIGHT_TO_LEFT
         return row.is_rtl()
 
     def cell_set_display_order(self):

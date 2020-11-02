@@ -37,6 +37,8 @@ def shift(request):
     row = get_object_or_404(Row, id=request.POST.get("row"))
     column = get_object_or_404(Column, id=request.POST.get("column"))
     delta = int(request.POST.get("delta"))
+    if row.is_rtl():
+        delta *= -1
     alignment.shift( row, column, delta )
 
     return HttpResponse("OK")

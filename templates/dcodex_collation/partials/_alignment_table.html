@@ -24,7 +24,7 @@
                     {% endif %}
 
                     {% for cell in row.cell_set_display_order %}
-                        <td class="token" style="direction: rtl;" data-row="{{ row.id }}" data-column="{{ cell.column.id }}" data-cell="{{ cell.id }}"  data-state="{{ cell.state.id }}" {% if cell.token %}draggable=true{% endif %}><div class="tokendiv" ><div class="shift shift-left"></div>{{ cell.token_display }}<div class="shift shift-right"></div></div></td>
+                        <td class="token {% if lignment.is_rtl %}rtl{%else%}ltr{%endif%}" data-row="{{ row.id }}" data-column="{{ cell.column.id }}" data-cell="{{ cell.id }}"  data-state="{{ cell.state.id }}" {% if cell.token %}draggable=true{% endif %}><div class="tokendiv" ><div class="shift shift-left"></div>{{ cell.token_display }}<div class="shift shift-right"></div></div></td>
                     {% endfor %}
 
                     {% if lignment.is_rtl %}

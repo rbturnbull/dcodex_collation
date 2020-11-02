@@ -125,10 +125,10 @@ function shift(element) {
         'maxshift': 0,
         }
     if (element.hasClass("shift-left")) {
-        data['delta'] = 1;
+        data['delta'] = -1;
     }
     else {
-        data['delta'] = -1;
+        data['delta'] = 1;
     }
     $.ajax({
         type: "POST",
