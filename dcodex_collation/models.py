@@ -1,7 +1,6 @@
 from django.db import models
 from scipy.cluster import hierarchy
-import gotoh_counts
-import gotoh_msa
+import gotoh
 import numpy as np
 from jsonfield import JSONField
 from ndarray import NDArrayField
@@ -32,7 +31,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
             if y_index >= x_index:
                 break
             y_string = y.normalize()
-            distance = gotoh_counts.nonmatches( x_string, y_string, *gotoh_param )
+            distance = gotoh.counts.nonmatches( x_string, y_string, *gotoh_param )
             distance_matrix_as_vector.append( distance )
 
     # Guide tree
@@ -67,7 +66,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         for index_j in range(index_i+1):
             token_j = normalize_transcription(str(id_to_word[index_j]))
             #print(index_i,index_j)
-            scoring_matrix[index_i,index_j] = gotoh_counts.score( token_i, token_j, *gotoh_param )
+            scoring_matrix[index_i,index_j] = gotoh.counts.score( token_i, token_j, *gotoh_param )
     #print(scoring_matrix)
     #print([scoring_matrix[1][2]])
     #print([scoring_matrix[2][1]])
@@ -87,7 +86,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         #print('right sigla', [t.manuscript.siglum for t in alignment_transcriptions[right_node_id]])
 #        return 
 
-        new_alignment = gotoh_msa.align( left_alignment, right_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
+        new_alignment = gotoh.msa( left_alignment, right_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
         alignments.append( new_alignment )
         alignment_transcriptions.append(  alignment_transcriptions[left_node_id] + alignment_transcriptions[right_node_id] )
         #
@@ -109,7 +108,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
             alignment_array = alignment_array[:,1:]
             # Realign row
 
-            alignment_array = gotoh_msa.align( alignment_array, row, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend, visualize=False )
+            alignment_array = gotoh.msa( alignment_array, row, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend, visualize=False )
             #print(alignment_array)
             #if transcription.manuscript.siglum == "J67_esk":
             #    return
