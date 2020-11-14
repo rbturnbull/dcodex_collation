@@ -137,28 +137,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
     Row.objects.filter(alignment=alignment).delete()
     for transcription, tokens in zip( alignment_transcriptions, np.rollaxis(alignment_array, 1) ):
         row, _ = Row.objects.update_or_create( transcription=transcription, alignment=alignment )
-        for rank, token_id in enumerate(tokens):
-            column = Column.objects.get(alignment=alignment, order=rank)
-
-            #print(column)
-            if token_id == -1:
-                token = None
-            else:
-                token_text = id_to_word[token_id]
-                token = Token.objects.get(text=token_text, alignment=alignment)
-
-            # Create State
-            if token and "⧙" in token.text:
-                state = None
-            else:
-                text = token.regularized if token else None
-                state, _ = State.objects.update_or_create( text=text )
-
-            # Create Cell
-            cell, _ = Cell.objects.update_or_create( row=row, column=column, defaults={
-                'token':token,
-                "state":state,
-            })        
+        row.create_cells_for_tokens(tokens)    
             #print(cell, row.transcription, column.order, token, state)
 
     #dn = hierarchy.dendrogram(linkage, orientation='right',labels=[transcription.manuscript.siglum for transcription in transcriptions])
@@ -214,8 +193,8 @@ class Alignment(models.Model):
         to_delete = []
         for column in self.column_set.all().reverse():
             if column.is_empty():
-                import logging
-                logging.warning("column empty"+ str(column.order))
+                # import logging
+                # logging.warning("column empty"+ str(column.order))
                 for c in list(self.column_set.filter(order__gt=column.order)):
                     #logging.warning("shifting " + str(c.order))
                     #continue
@@ -292,7 +271,30 @@ class Row(models.Model):
 
     def is_rtl(self):
         return self.transcription.manuscript.text_direction == TextDirection.RIGHT_TO_LEFT
-        return row.is_rtl()
+
+    def create_cells_for_tokens(self, tokens):
+        for rank, token_id in enumerate(tokens):
+            column, _ = Column.objects.get_or_create(alignment=self.alignment, order=rank)
+
+            #print(column)
+            if token_id == -1:
+                token = None
+            else:
+                token_text = self.alignment.id_to_word[token_id]
+                token, _ = Token.objects.get_or_create(text=token_text, alignment=self.alignment, defaults=dict(rank=token_id),)
+
+            # Create State
+            if token and "⧙" in token.text:
+                state = None
+            else:
+                text = token.regularized if token else None
+                state, _ = State.objects.update_or_create( text=text )
+
+            # Create Cell
+            cell, _ = Cell.objects.update_or_create( row=self, column=column, defaults={
+                'token':token,
+                "state":state,
+            })            
 
     def cell_set_display_order(self):
         if self.is_rtl():
@@ -300,7 +302,7 @@ class Row(models.Model):
         return self.cell_set.all()
 
     def token_id_at( self, column ):
-        self.cell_at(column)
+        cell = self.cell_at(column)
         if cell:
             return cell.token
 

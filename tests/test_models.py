@@ -17,16 +17,18 @@ class AlignmentTest(TestCase):
         self.original_columns_count = len(self.tokens)
         for row_index in range(10):
             transcription = baker.make(VerseTranscription, verse=verse )
-            Row.objects.update_or_create( alignment=self.alignment, tokens=self.tokens, transcription=transcription )
-        
-        for order in range(len(self.tokens)):
-            Column.objects.update_or_create( alignment=self.alignment, order=order)
-
-        
+            row, _ = Row.objects.update_or_create( alignment=self.alignment, tokens=self.tokens, transcription=transcription )
+            row.create_cells_for_tokens(self.tokens)
 
     def test_empty_columns(self):
         empty = self.alignment.empty_columns()
         gold = [True] + [False]*5 + [True]
+        print(f'{empty =}')
+
+        for row in self.alignment.row_set.all():
+            print('row', row)
+            for cell in row.cell_set.all():
+                print(cell, 'cell')
         np.testing.assert_array_equal( empty, np.asarray(gold))
         self.assertEqual( np.argwhere(empty)[0][0], 0 )
         self.assertEqual( np.argwhere(empty)[1][0], 6 )
@@ -42,7 +44,6 @@ class AlignmentTest(TestCase):
             self.assertEqual( index, column.order )
 
     def test_clear_empty(self):
-
         start_empty = self.alignment.empty_columns()
         self.alignment.clear_empty()
         empty = self.alignment.empty_columns()
@@ -87,51 +88,5 @@ class AlignmentTest(TestCase):
         
 
 
-class MaxShiftTest(TestCase):
-    def setUp(self):
-        family = baker.make(Family)
-        verse = baker.make(Verse)
-        word_to_id = {str(x):x for x in range(10)}
-        id_to_word = np.asarray( list(word_to_id.keys() ) )
-        self.alignment, _ = Alignment.objects.update_or_create( family=family, verse=verse, word_to_id=word_to_id, id_to_word=id_to_word )
-        self.tokens = np.asarray( [ 5, 2, -1, -1, -1, -1, 4, -1, 3] )
-        self.original_columns_count = len(self.tokens)
-        for row_index in range(10):
-            transcription = baker.make(VerseTranscription, verse=verse )
-            Row.objects.update_or_create( alignment=self.alignment, tokens=self.tokens, transcription=transcription )
-        
-        for order in range(len(self.tokens)):
-            Column.objects.update_or_create( alignment=self.alignment, order=order)
 
-    def check_maxshift(self, delta, initial_col_order, new_column_order):
-        column = Column.objects.get(alignment=self.alignment, order=initial_col_order)
-        row = self.alignment.row_set.first()
-        token_id = row.token_id_at(column)
-
-        self.alignment.maxshift(row=row, column=column, delta=delta, clear=False)
-        self.assertEqual( 9, self.alignment.column_set.count() )
-
-        row = self.alignment.row_set.first() # Get the row again from the database
-        column = Column.objects.get(id=column.id) # Get the column again from the database
-
-        self.assertEqual( row.token_id_at(column), -1 )
-        new_column = Column.objects.get(order=new_column_order, alignment=self.alignment)
-        self.assertEqual( row.token_id_at(new_column), token_id )
-        print('--')
-        for r in self.alignment.row_set.all():
-            print(r.tokens)
-        print('--')
-
-        
-    def test_maxshift_positive(self):
-        delta = 1
-        initial_col_order = 1
-        new_column_order = 5
-        self.check_maxshift( delta, initial_col_order, new_column_order )
-
-    def test_maxshift_negative(self):
-        delta = -1
-        initial_col_order = 6
-        new_column_order = 2
-        self.check_maxshift( delta, initial_col_order, new_column_order )
 
