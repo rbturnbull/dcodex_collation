@@ -23,12 +23,12 @@ class AlignmentTest(TestCase):
     def test_empty_columns(self):
         empty = self.alignment.empty_columns()
         gold = [True] + [False]*5 + [True]
-        print(f'{empty =}')
+        # print(f'{empty =}')
 
-        for row in self.alignment.row_set.all():
-            print('row', row)
-            for cell in row.cell_set.all():
-                print(cell, 'cell')
+        # for row in self.alignment.row_set.all():
+        #     print('row', row)
+        #     for cell in row.cell_set.all():
+        #         print(cell, 'cell')
         np.testing.assert_array_equal( empty, np.asarray(gold))
         self.assertEqual( np.argwhere(empty)[0][0], 0 )
         self.assertEqual( np.argwhere(empty)[1][0], 6 )
@@ -47,12 +47,14 @@ class AlignmentTest(TestCase):
         start_empty = self.alignment.empty_columns()
         self.alignment.clear_empty()
         empty = self.alignment.empty_columns()
+
         self.assertEqual( np.any(empty), False )
         col_count = self.alignment.column_set.count()
         self.assertEqual( col_count, 5 )
         for row in self.alignment.row_set.all():
-            self.assertEqual( len(row.tokens), col_count )
-            self.assertEqual( np.any(row.tokens == -1), False )
+            self.assertEqual( row.cell_set.count(), col_count ) # not sure what this is testing
+            for cell in row.cell_set.all():
+                self.assertEqual( cell.token is not None, True )
 
         for index, column in enumerate(self.alignment.column_set.all()):
             self.assertEqual( index, column.order )
@@ -63,6 +65,7 @@ class AlignmentTest(TestCase):
         token_id = row.token_id_at(column)
 
         self.alignment.shift(row=row, column=column, delta=delta)
+        self.alignment.clear_empty()
         self.assertEqual( 6, self.alignment.column_set.count() )
 
         row = self.alignment.row_set.first() # Get the row again from the database
@@ -72,7 +75,7 @@ class AlignmentTest(TestCase):
         final_column_order -= 1 # Because the first column is deleted in the clean up
 
         self.assertEqual( column.order, final_column_order )
-        self.assertEqual( row.token_id_at(column), -1 )
+        self.assertEqual( row.token_id_at(column), None )
         new_column = Column.objects.get(order=final_column_order+delta, alignment=self.alignment)
         self.assertEqual( row.token_id_at(new_column), token_id )
 
