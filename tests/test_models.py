@@ -12,13 +12,13 @@ class AlignmentTest(TestCase):
         verse = baker.make(Verse)
         word_to_id = {str(x):x for x in range(10)}
         id_to_word = np.asarray( list(word_to_id.keys() ) )
-        self.alignment, _ = Alignment.objects.update_or_create( family=family, verse=verse, word_to_id=word_to_id, id_to_word=id_to_word )
+        self.alignment, _ = Alignment.objects.update_or_create( family=family, verse=verse )
         self.tokens = np.asarray( [-1, 5, 4, 3, 2, 1, -1] )
         self.original_columns_count = len(self.tokens)
         for row_index in range(10):
             transcription = baker.make(VerseTranscription, verse=verse )
-            row, _ = Row.objects.update_or_create( alignment=self.alignment, tokens=self.tokens, transcription=transcription )
-            row.create_cells_for_tokens(self.tokens)
+            row, _ = Row.objects.update_or_create( alignment=self.alignment, transcription=transcription )
+            row.create_cells_for_tokens(self.tokens, id_to_word)
 
     def test_empty_columns(self):
         empty = self.alignment.empty_columns()

@@ -2,12 +2,12 @@ from django.db import models
 from scipy.cluster import hierarchy
 import gotoh
 import numpy as np
-from jsonfield import JSONField
-from ndarray import NDArrayField
+# from jsonfield import JSONField
+# from ndarray import NDArrayField
 from scipy.sparse import lil_matrix
 import matplotlib.pyplot as plt
 from dcodex.models import *
-from dcodex.strings import *
+from dcodex.models.markup import *
 from django.urls import reverse
 
 
@@ -137,7 +137,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
     Row.objects.filter(alignment=alignment).delete()
     for transcription, tokens in zip( alignment_transcriptions, np.rollaxis(alignment_array, 1) ):
         row, _ = Row.objects.update_or_create( transcription=transcription, alignment=alignment )
-        row.create_cells_for_tokens(tokens)    
+        row.create_cells_for_tokens(tokens, id_to_word)    
             #print(cell, row.transcription, column.order, token, state)
 
     #dn = hierarchy.dendrogram(linkage, orientation='right',labels=[transcription.manuscript.siglum for transcription in transcriptions])
@@ -150,8 +150,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 class Alignment(models.Model):
     family = models.ForeignKey( Family, on_delete=models.SET_DEFAULT, default=None, null=True, blank=True )
     verse = models.ForeignKey( Verse, on_delete=models.CASCADE )
-    word_to_id = JSONField(help_text="Vocab dictionary", blank=True, null=True)
-    id_to_word = NDArrayField(help_text="Index of vocab dictionary", blank=True, null=True)
+    # word_to_id = JSONField(help_text="Vocab dictionary", blank=True, null=True)
+    # id_to_word = NDArrayField(help_text="Index of vocab dictionary", blank=True, null=True)
 
     class Meta:
         ordering = ['family', 'verse']
@@ -170,7 +170,6 @@ class Alignment(models.Model):
         if self.is_rtl():
             return self.column_set.all().reverse()
         return self.column_set.all()
-
 
     def add_column(self, new_column_order):
         columns = self.column_set.filter( order__gte=new_column_order )
@@ -267,12 +266,12 @@ class Alignment(models.Model):
 class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
-    tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment", blank=True, null=True)
+    # tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment", blank=True, null=True)
 
     def is_rtl(self):
         return self.transcription.manuscript.text_direction == TextDirection.RIGHT_TO_LEFT
 
-    def create_cells_for_tokens(self, tokens):
+    def create_cells_for_tokens(self, tokens, id_to_word):
         for rank, token_id in enumerate(tokens):
             column, _ = Column.objects.get_or_create(alignment=self.alignment, order=rank)
 
@@ -280,7 +279,7 @@ class Row(models.Model):
             if token_id == -1:
                 token = None
             else:
-                token_text = self.alignment.id_to_word[token_id]
+                token_text = id_to_word[token_id]
                 token, _ = Token.objects.get_or_create(text=token_text, alignment=self.alignment, defaults=dict(rank=token_id),)
 
             # Create State
@@ -301,16 +300,16 @@ class Row(models.Model):
             return self.cell_set.all().reverse()
         return self.cell_set.all()
 
-    def token_id_at( self, column ):
+    def token_id_at( self, column ): # should this be token_at ?
         cell = self.cell_at(column)
         if cell:
             return cell.token
 
-    def token_at( self, column ):
-        token_id = self.token_id_at( column )
-        if token_id < 0:
-            return ""
-        return self.alignment.id_to_word[ token_id ]        
+    # def token_at( self, column ):
+    #     token_id = self.token_id_at( column )
+    #     if token_id < 0:
+    #         return ""
+    #     return self.alignment.id_to_word[ token_id ]        
 
     def cell_at(self, column):
         return self.cell_set.filter(column=column).first()

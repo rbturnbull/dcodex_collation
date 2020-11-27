@@ -6,8 +6,8 @@ requirements = [
     'numpy',
     'pandas>=1.0.5',
     'matplotlib',
-    "jsonfield>=3.1.0",
-    "django-ndarray>=0.0.3",
+    # "jsonfield>=3.1.0",
+    # "django-ndarray>=0.0.3",
 ]
 
 setup(
