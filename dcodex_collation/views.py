@@ -2,16 +2,18 @@ from django.shortcuts import render
 from django.views.generic.detail import DetailView
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
 
 from .models import *
 from dcodex.models import *
 
 
-class AlignmentDetailView(DetailView):
+class AlignmentDetailView(LoginRequiredMixin, DetailView):
     model = Alignment
     template_name = "dcodex_collation/alignment.html"
 
-
+@login_required
 def alignment_for_family(request, family_siglum, verse_ref):
     family = get_object_or_404(Family, name=family_siglum)
     verse = family.get_verse_from_string( verse_ref )
@@ -25,12 +27,13 @@ def alignment_for_family(request, family_siglum, verse_ref):
     #return HttpResponse(str(family.id))
     return render( request, "dcodex_collation/alignment.html", context={'alignment':alignment, 'alignments_for_family': Alignment.objects.filter( family=family )})
 
+@login_required
 def clear_empty(request):
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
     alignment.clear_empty( )
     return HttpResponse("OK")
 
-
+@login_required
 def shift(request):
 
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
@@ -43,7 +46,7 @@ def shift(request):
 
     return HttpResponse("OK")
 
-
+@login_required
 def shift_to(request):
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
     row = get_object_or_404(Row, id=request.POST.get("row"))
@@ -55,6 +58,7 @@ def shift_to(request):
     
     return HttpResponseBadRequest("Cannot shift to this column.")
 
+@login_required
 def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank, pair_rank):
     family = get_object_or_404(Family, name=family_siglum)
     verse = family.get_verse_from_string( verse_ref )
@@ -97,7 +101,7 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
         'alignments_for_family': Alignment.objects.filter( family=family ),
         })
 
-
+@login_required
 def set_transition_type(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
     transition_type = get_object_or_404(TransitionType, id=request.POST.get("transition_type"))
@@ -111,6 +115,7 @@ def set_transition_type(request):
     })
     return HttpResponse("OK")
 
+@login_required
 def set_atext(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
     state = get_object_or_404(State, id=request.POST.get("state"))
@@ -118,6 +123,7 @@ def set_atext(request):
     column.save()
     return HttpResponse("OK")
 
+@login_required
 def remove_atext(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
     state = get_object_or_404(State, id=request.POST.get("state"))
@@ -129,6 +135,7 @@ def remove_atext(request):
 
     return HttpResponse("OK")    
 
+@login_required
 def save_atext_notes(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
     state = get_object_or_404(State, id=request.POST.get("state"))
