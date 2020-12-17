@@ -31,7 +31,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
             if y_index >= x_index:
                 break
             y_string = y.normalize()
-            distance = gotoh.counts.nonmatches( x_string, y_string, *gotoh_param )
+            distance = gotoh.nonmatches( x_string, y_string, *gotoh_param )
             distance_matrix_as_vector.append( distance )
 
     # Guide tree
@@ -66,7 +66,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         for index_j in range(index_i+1):
             token_j = normalize_transcription(str(id_to_word[index_j]))
             #print(index_i,index_j)
-            scoring_matrix[index_i,index_j] = gotoh.counts.score( token_i, token_j, *gotoh_param )
+            scoring_matrix[index_i,index_j] = gotoh.score( token_i, token_j, *gotoh_param )
     #print(scoring_matrix)
     #print([scoring_matrix[1][2]])
     #print([scoring_matrix[2][1]])
