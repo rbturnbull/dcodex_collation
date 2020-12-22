@@ -268,6 +268,9 @@ class Row(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     # tokens = NDArrayField(help_text="Numpy array for the tokens. IDs correspond to the vocab in the alignment", blank=True, null=True)
 
+    class Meta:
+        ordering = ["transcription__manuscript",]
+
     def is_rtl(self):
         return self.transcription.manuscript.text_direction == TextDirection.RIGHT_TO_LEFT
 
