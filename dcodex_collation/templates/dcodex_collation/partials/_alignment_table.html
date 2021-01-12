@@ -23,9 +23,13 @@
                         <th scope="row"><a href="/dcodex/ms/{{ row.transcription.manuscript.siglum }}/{{ row.transcription.verse.url_ref }}/" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>
                     {% endif %}
 
+
+                    {% row_cells_td alignment row %}
+                    {% comment %}
                     {% for cell in row.cell_set_display_order %}
                         <td class="token {% if alignment.is_rtl %}rtl{%else%}ltr{%endif%}" data-row="{{ row.id }}" data-column="{{ cell.column.id }}" data-cell="{{ cell.id }}"  data-state="{{ cell.state.id }}" {% if cell.token %}draggable=true{% endif %}><div class="tokendiv" ><div class="shift shift-left"></div>{{ cell.token_display }}<div class="shift shift-right"></div></div></td>
                     {% endfor %}
+                    {% endcomment %}
 
                     {% if alignment.is_rtl %}
                         <th scope="row"><a href="/dcodex/ms/{{ row.transcription.manuscript.siglum }}/{{ row.transcription.verse.url_ref }}/" data-toggle="tooltip" data-placement="bottom" title="{{ row.transcription.manuscript }}">{{ row.transcription.manuscript.short_name }}</a></th>

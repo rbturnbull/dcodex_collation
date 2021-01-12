@@ -262,6 +262,8 @@ class Alignment(models.Model):
         # Check that no columns are empty
         #self.clear_empty( )
 
+    def row_ids(self):
+        return self.row_set.values_list('id', flat=True)
 
 class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
@@ -301,7 +303,7 @@ class Row(models.Model):
     def cell_set_display_order(self):
         if self.is_rtl():
             return self.cell_set.all().reverse()
-        return self.cell_set.all()
+        return self.cell_set.all()        
 
     def token_id_at( self, column ): # should this be token_at ?
         cell = self.cell_at(column)
