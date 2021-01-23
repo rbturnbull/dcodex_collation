@@ -15,14 +15,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         family = Family.objects.get(name=options['family'])
-        witnesses = family.manuscripts()
+        witnesses_in_family = family.manuscripts()
 
-        VerseClass = witnesses.first().verse_class()
+        VerseClass = witnesses_in_family.first().verse_class()
 
         start_verse_string = options['start'] or ""
         end_verse_string = options['end'] or ""
 
         verses = VerseClass.queryset_from_strings( start_verse_string, end_verse_string )
+
+        # Filter for witnesses that attest verses in this selection
+        witness_ids = []
+        for witness in witnesses_in_family.all():
+            if VerseTranscriptionBase.objects.filter( verse__in=verses, manuscript=witness ).count() > 0:
+                witness_ids.append( witness.id )
+        witnesses = witnesses_in_family.filter(id__in=witness_ids) # Should do this a better way
 
         if options['filename']:
             with open(options['filename'], 'w') as file:
