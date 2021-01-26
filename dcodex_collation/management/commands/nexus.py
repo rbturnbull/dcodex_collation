@@ -11,6 +11,7 @@ class Command(BaseCommand):
         parser.add_argument('start', type=str, help="The starting verse of the passage selection.")
         parser.add_argument('end', type=str, nargs='?', help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.")
         parser.add_argument('--filename', type=str, help="The path to the NEXUS file to be outputted.")
+        parser.add_argument('--exclude-regex', type=str, help="A regex to exclude.")
 
 
     def handle(self, *args, **options):
@@ -28,6 +29,8 @@ class Command(BaseCommand):
         witness_ids = []
         for witness in witnesses_in_family.all():
             if VerseTranscriptionBase.objects.filter( verse__in=verses, manuscript=witness ).count() > 0:
+                if witness.siglum.endswith("_C"):
+                    continue
                 witness_ids.append( witness.id )
         witnesses = witnesses_in_family.filter(id__in=witness_ids) # Should do this a better way
 

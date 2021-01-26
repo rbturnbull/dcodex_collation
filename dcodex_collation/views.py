@@ -1,3 +1,5 @@
+import numpy as np
+
 from django.shortcuts import render
 from django.views.generic.detail import DetailView
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -147,3 +149,63 @@ def save_atext_notes(request):
 
     return HttpResponse("OK")    
 
+
+@login_required
+def pairwise_comparison(request, siglum1, siglum2):
+    manuscript1 = Manuscript.find(siglum1)
+    if not manuscript1:
+        raise Http404(f"Cannot find manuscript '{siglum1}'")
+    manuscript2 = Manuscript.find(siglum2)
+    if not manuscript2:
+        raise Http404(f"Cannot find manuscript '{siglum2}'")
+
+
+    column_ids_for_manuscript1 = Cell.objects.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
+    column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+
+    column_ids_intersection = sorted(set(column_ids_for_manuscript1) & set(column_ids_for_manuscript2))
+
+    total_count = len(column_ids_intersection)
+
+    intersection_cells = Cell.objects.filter( column__id__in=column_ids_intersection )
+
+    states_manuscript1 = intersection_cells.filter(row__transcription__manuscript=manuscript1 ).order_by('column__id').values_list( 'state__id', flat=True )
+    states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
+
+    states_array_manuscript1 = np.array(list(states_manuscript1))
+    states_array_manuscript2 = np.array(list(states_manuscript2))
+
+    agreement_count = np.sum( states_array_manuscript1 == states_array_manuscript2 )
+
+    column_ids_intersection_array = np.array(column_ids_intersection)
+    disagreement_column_ids = column_ids_intersection_array[states_array_manuscript1 != states_array_manuscript2]
+
+    disagreement_states_array_manuscript1 = states_array_manuscript1[ states_array_manuscript1 != states_array_manuscript2 ]
+    disagreement_states_array_manuscript2 = states_array_manuscript2[ states_array_manuscript1 != states_array_manuscript2 ]
+
+
+    # disagreement_transition_names = []
+    disagreement_transitions = []
+
+    for column_id, state1, state2 in zip( disagreement_column_ids, disagreement_states_array_manuscript1, disagreement_states_array_manuscript2 ):
+        column = Column.objects.get(id=column_id)
+        transition = Transition.objects.filter( column__id=column_id, start_state__id=state1, end_state__id=state2 ).first()
+        if not transition:
+            transition = Transition.objects.filter( column__id=column_id, start_state__id=state2, end_state__id=state1 ).first()
+            if transition:
+                transition = transition.create_inverse()
+        if transition:
+            # disagreement_transition_names.append( str(transition) )
+            disagreement_transitions.append( transition )
+
+    context = dict(
+        manuscript1=manuscript1,
+        manuscript2=manuscript2,
+        total_count=total_count,
+        agreement_count=agreement_count,
+        agreement_percentage=agreement_count/total_count*100.0,
+        disagreement_count=total_count-agreement_count,
+        disagreement_transitions=disagreement_transitions,
+    )
+
+    return render( request, "dcodex_collation/pairwise_comparison.html", context=context)

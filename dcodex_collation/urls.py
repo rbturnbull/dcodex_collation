@@ -13,4 +13,5 @@ urlpatterns = [
     path('set_atext/', views.set_atext, name='set_atext'),    
     path('remove_atext/', views.remove_atext, name='remove_atext'),    
     path('save_atext_notes/', views.save_atext_notes, name='save_atext_notes'),    
+    path('alignment-pairwise-comparison/<str:siglum1>/<str:siglum2>/', views.pairwise_comparison, name='alignment-pairwise-comparison'),
 ]
