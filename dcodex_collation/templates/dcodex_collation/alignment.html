@@ -63,8 +63,12 @@ th {
 {% block middle %}
 {{ alignment.family }}: {{alignment.verse}}
 
-<a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=alignment.verse.prev.url_ref %}" class="btn btn-outline-primary">Prev</a>
-<a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=alignment.verse.next.url_ref %}" class="btn btn-outline-primary">Next</a>
+{% if prev_verse %}
+    <a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=prev_verse.url_ref %}" class="btn btn-outline-primary">Prev</a>
+{% endif %}
+{% if next_verse %}
+    <a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=next_verse.url_ref %}" class="btn btn-outline-primary">Next</a>
+{% endif %}
 
 <div class="container">
 

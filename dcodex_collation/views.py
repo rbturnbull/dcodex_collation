@@ -22,12 +22,24 @@ def alignment_for_family(request, family_siglum, verse_ref):
     family = get_object_or_404(Family, name=family_siglum)
 
     alignment = Alignment.objects.filter( verse=verse, family=family ).first()
+    
     if not alignment:
-        gotoh_param = [6.6995597099885345, -0.9209875054657459, -5.097397327423096, -1.3005714416503906]
-        alignment = align_family_at_verse( family, verse, gotoh_param )    
+        raise Http404(f"Alignment not found for verse {verse}.")
+    #     gotoh_param = [6.6995597099885345, -0.9209875054657459, -5.097397327423096, -1.3005714416503906]
+    #     alignment = align_family_at_verse( family, verse, gotoh_param )    
 
     #return HttpResponse(str(family.id))
-    return render( request, "dcodex_collation/alignment.html", context={'alignment':alignment, 'alignments_for_family': Alignment.objects.filter( family=family )})
+    next_alignment = Alignment.objects.filter( verse__rank__gt=verse.rank, family=family ).first()
+    prev_alignment = Alignment.objects.filter( verse__rank__lt=verse.rank, family=family ).order_by('-verse__rank').first()
+
+    context = {
+        'alignment':alignment, 
+        'alignments_for_family': Alignment.objects.filter( family=family ),
+        'next_verse': next_alignment.verse,
+        'prev_verse': prev_alignment.verse,
+    }
+
+    return render( request, "dcodex_collation/alignment.html", context=context )
 
 @login_required
 def clear_empty(request):
