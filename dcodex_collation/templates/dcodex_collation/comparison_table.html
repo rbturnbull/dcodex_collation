@@ -22,7 +22,7 @@
                 {% for siglum2 in sigla %}
                     {% with y=forloop.counter0 %}
                         <td>
-                            <a href="{% url 'alignment-pairwise-comparison' siglum1 siglum2  %}">{% array_2d_value array=comparison_array x=x y=y %}</a>
+                            <a href="{% url 'alignment-pairwise-comparison' siglum1 siglum2  %}">{% array_2d_value_percent array=comparison_array x=x y=y %}</a>
                         </td>
                     {% endwith %}
                 {% endfor %}
