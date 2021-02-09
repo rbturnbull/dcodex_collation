@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load dcodex_collation_tags %}
+{% block title %}Compare States{% endblock %}
+
+
+{% block content %}
+
+<table class="table">
+    <thead>
+        <tr>
+        <th></th>
+        {% for siglum in sigla %}
+            <th>{{ siglum }}</th>
+        {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for siglum1 in sigla %}
+            {% with x=forloop.counter0 %}
+            <tr>
+                <th>{{ siglum1 }}</th>
+                {% for siglum2 in sigla %}
+                    {% with y=forloop.counter0 %}
+                        <td>
+                            <a href="{% url 'alignment-pairwise-comparison' siglum1 siglum2  %}">{% array_2d_value array=comparison_array x=x y=y %}</a>
+                        </td>
+                    {% endwith %}
+                {% endfor %}
+            </tr>
+            {% endwith %}
+        {% endfor %}
+    </tbody>
+
+</table>
+
+{% endblock content %}

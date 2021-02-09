@@ -21,6 +21,10 @@ def state_str_at(state, column):
     return state.str_at(column)
 
 @register.simple_tag
+def array_2d_value(array, x, y):
+    return "%.2f" % array[x,y]
+
+@register.simple_tag
 def row_cells_td(alignment, row):
     html = ""
     direction = "rtl" if alignment.is_rtl() else "ltr"

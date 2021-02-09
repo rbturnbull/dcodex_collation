@@ -1,14 +1,16 @@
 import numpy as np
 
 from django.shortcuts import render
-from django.views.generic.detail import DetailView
+from django.views.generic import DetailView, FormView
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 
-from .models import *
 from dcodex.models import *
+from .models import *
+from .forms import *
+
 
 
 class AlignmentDetailView(LoginRequiredMixin, DetailView):
@@ -19,7 +21,6 @@ class AlignmentDetailView(LoginRequiredMixin, DetailView):
 def alignment_for_family(request, family_siglum, verse_ref):
     family = get_object_or_404(Family, name=family_siglum)
     verse = family.get_verse_from_string( verse_ref )
-    family = get_object_or_404(Family, name=family_siglum)
 
     alignment = Alignment.objects.filter( verse=verse, family=family ).first()
     
@@ -221,3 +222,21 @@ def pairwise_comparison(request, siglum1, siglum2):
     )
 
     return render( request, "dcodex_collation/pairwise_comparison.html", context=context)
+
+
+class ComparisonTableFormView(LoginRequiredMixin, FormView):
+    template_name = 'dcodex/form.html'
+    form_class = ComparisonTableForm
+
+    def form_valid(self, form):
+        # This method is called when valid form data has been POSTed.
+        # It should return an HttpResponse.
+        sigla, comparison_array = form.comparison_table()
+
+        context = dict(
+            sigla=sigla,
+            comparison_array=comparison_array,
+        )
+        return render(self.request, 'dcodex_collation/comparison_table.html', context)
+
+
