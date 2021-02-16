@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.views.generic import DetailView, FormView
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
+from django.http import Http404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 

@@ -19,9 +19,17 @@ def get_gap_state():
 def tokenize_strings( transcriptions ):
     return [transcription.tokenize() for transcription in transcriptions]
 
-def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2):
+def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2, exclude_empty=True):
     transcriptions = list(family.transcriptions_at(verse))
     transcriptions = [t for t in transcriptions if '_' not in t.verse.url_ref()] # hack for certain lectionaries
+    
+    # Exclude transcriptions with just empty strings. If a verse is omitted, then there should be some markup in the transcription
+    if exclude_empty:
+        transcriptions = [t for t in transcriptions if len(t.transcription.strip()) > 0]
+
+    if len(transcriptions) < 2:
+        print(f"Too few transcriptions at {verse}")
+        return
 
     # Distance matrix
     distance_matrix_as_vector = []
@@ -40,7 +48,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 
     # Tokenize
     token_strings = tokenize_strings(transcriptions)
-    #print(token_strings)
+    print(token_strings)
+
     vocab = {}
     vocab_index = 0
     alignments = []
@@ -81,12 +90,16 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 
         left_alignment = alignments[left_node_id]
         right_alignment = alignments[right_node_id]
-        #print("--")
-        #print('left sigla', [t.manuscript.siglum for t in alignment_transcriptions[left_node_id]])
-        #print('right sigla', [t.manuscript.siglum for t in alignment_transcriptions[right_node_id]])
-#        return 
+        # print("--")
+        # print('left sigla', [t.manuscript.siglum for t in alignment_transcriptions[left_node_id]], left_alignment)
+        # print('right sigla', [t.manuscript.siglum for t in alignment_transcriptions[right_node_id]], right_alignment)
+# #        return 
+
+        # if left_alignment == None or right_alignment == None:
+        #     raise Exception(f"One of the alignments is null. L: {left_alignment}. R: {right_alignment}")
 
         new_alignment = gotoh.msa( left_alignment, right_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
+        print(f"new_alignment = {new_alignment}")
         alignments.append( new_alignment )
         alignment_transcriptions.append(  alignment_transcriptions[left_node_id] + alignment_transcriptions[right_node_id] )
         #

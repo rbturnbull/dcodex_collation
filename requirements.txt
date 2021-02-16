@@ -12,7 +12,6 @@ django-ndarray==0.0.3
 django-polymorphic==3.0.0
 docutils==0.16
 -e git+https://github.com/rbturnbull/gotoh.git@9887175dfc40601493471b481a69aa3152408d49#egg=gotoh
--e git+https://github.com/rbturnbull/gotoh_counts.git@16e8542e27aba130755a539dfd90301a29a16242#egg=gotoh_counts_rbturnbull
 idna==2.10
 imagesize==1.2.0
 Jinja2==2.11.2
