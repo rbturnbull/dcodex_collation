@@ -34,11 +34,14 @@ def alignment_for_family(request, family_siglum, verse_ref):
     next_alignment = Alignment.objects.filter( verse__rank__gt=verse.rank, family=family ).first()
     prev_alignment = Alignment.objects.filter( verse__rank__lt=verse.rank, family=family ).order_by('-verse__rank').first()
 
+    next_verse = next_alignment.verse if next_alignment else None
+    prev_verse = prev_alignment.verse if prev_alignment else None
+
     context = {
         'alignment':alignment, 
         'alignments_for_family': Alignment.objects.filter( family=family ),
-        'next_verse': next_alignment.verse,
-        'prev_verse': prev_alignment.verse,
+        'next_verse': next_verse,
+        'prev_verse': prev_verse,
     }
 
     return render( request, "dcodex_collation/alignment.html", context=context )
