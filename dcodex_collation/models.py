@@ -569,8 +569,9 @@ class TransitionClassifier(PolymorphicModel):
         raise NotImplementedError("This method is not implemented.")
 
     def classify(self, column, start_state, end_state):
+        transition = None
         if self.match(column, start_state, end_state):
-            Transition.objects.update_or_create(
+            transition, _ =  Transition.objects.update_or_create(
                 column=column,
                 start_state=start_state,
                 end_state=end_state,
@@ -581,16 +582,17 @@ class TransitionClassifier(PolymorphicModel):
                 )
             )
         elif self.match( column, end_state, start_state ):
-            Transition.objects.update_or_create(
+            transition, _ = Transition.objects.update_or_create(
                 column=column,
-                start_state=end_state,
-                end_state=start_state,
+                start_state=start_state,
+                end_state=end_state,
                 defaults=dict(
                     inverse=True,
                     transition_type=self.transition_type,
                     classifier=self,
                 )
             )
+        return transition
 
 
 class RegexTransitionClassifier(TransitionClassifier):

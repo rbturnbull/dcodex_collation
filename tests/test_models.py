@@ -110,3 +110,30 @@ class RegexTransitionClassifierTest(TestCase):
     def test_regex_match(self):
         self.assertEqual( self.classifier.match(self.column, self.state1, self.state2), True )
         self.assertEqual( self.classifier.match(self.column, self.state2, self.state1), False )
+
+    def test_classify(self):
+        transition = self.classifier.classify(self.column, self.state1, self.state2)
+        self.assertIsNotNone( transition )                        
+        self.assertEqual( transition.classifier.id, self.classifier.id )        
+        self.assertEqual( transition.transition_type.id, self.transition_type.id )        
+        self.assertEqual( transition.inverse, False )        
+        self.assertEqual( transition.start_state.id, self.state1.id )        
+        self.assertEqual( transition.end_state.id, self.state2.id )        
+        self.assertEqual( transition.column.id, self.column.id )        
+
+    def test_classify_inverse(self):
+        transition = self.classifier.classify(self.column, self.state2, self.state1)
+        self.assertIsNotNone( transition )                        
+        self.assertEqual( transition.classifier.id, self.classifier.id )        
+        self.assertEqual( transition.transition_type.id, self.transition_type.id )        
+        self.assertEqual( transition.inverse, True )        
+        self.assertEqual( transition.start_state.id, self.state2.id )        
+        self.assertEqual( transition.end_state.id, self.state1.id )        
+        self.assertEqual( transition.column.id, self.column.id )        
+
+    def test_classify_fail(self):
+        transition = self.classifier.classify(self.column, self.state1, self.state1)
+        self.assertIsNone( transition )       
+
+        transition = self.classifier.classify(self.column, self.state2, self.state2)
+        self.assertIsNone( transition )                        
