@@ -5,24 +5,34 @@ beautifulsoup4==4.9.3
 certifi==2020.6.20
 chardet==3.0.4
 cycler==0.10.0
--e git+https://github.com/rbturnbull/dcodex@27b1618b5eb66321ec1f955fdbc99ae3e3ab78d1#egg=dcodex
--e git+https://github.com/rbturnbull/dcodex_collation.git@30969617f1d7aee680ebf2f6c649c6bfe7cd4d02#egg=dcodex_lectionary
+-e git+https://github.com/rbturnbull/dcodex@382852ce89c15be22025ef39b324e667253b6906#egg=dcodex
 Django==3.1.3
+django-admin-sortable2==0.7.8
+django-appconf==1.0.4
+django-filer==2.0.2
+django-guardian==2.3.0
+-e git+https://gitlab.unimelb.edu.au/rturnbull/django-imagedeck.git@7ca28979fac7d16da1b6d3b2444fe8652844209e#egg=django_imagedeck
+django-imagekit==4.0.2
+django-js-asset==1.2.2
+django-mptt==0.11.0
 django-ndarray==0.0.3
 django-polymorphic==3.0.0
 docutils==0.16
+easy-thumbnails==2.7.1
 -e git+https://github.com/rbturnbull/gotoh.git@9887175dfc40601493471b481a69aa3152408d49#egg=gotoh
 idna==2.10
 imagesize==1.2.0
 Jinja2==2.11.2
 jsonfield==3.1.0
 kiwisolver==1.3.1
+lxml==4.6.2
 MarkupSafe==1.1.1
 matplotlib==3.3.2
 model-bakery==1.1.1
 numpy==1.19.4
 packaging==20.4
 pandas==1.1.4
+pilkit==2.0
 Pillow==8.0.1
 Pygments==2.7.2
 pyparsing==2.4.7
@@ -30,6 +40,7 @@ python-dateutil==2.8.1
 python-Levenshtein==0.12.0
 pytz==2020.4
 pyxDamerauLevenshtein==1.6.1
+regex==2020.11.13
 requests==2.24.0
 scipy==1.5.4
 six==1.15.0
@@ -44,4 +55,5 @@ sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
 sqlparse==0.4.1
+Unidecode==1.1.2
 urllib3==1.25.11

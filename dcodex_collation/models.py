@@ -560,12 +560,62 @@ class TransitionType(models.Model):
         ordering = ['name']
 
 
+class TransitionClassifier(PolymorphicModel):
+    name = models.CharField(max_length=255, unique=True)    
+    transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
+
+    def match(self, column, start_state, end_state):
+        """ Returns True if this these states should be classified with this object's transition type. """
+        raise NotImplementedError("This method is not implemented.")
+
+    def classify(self, column, start_state, end_state):
+        if self.match(column, start_state, end_state):
+            Transition.objects.update_or_create(
+                column=column,
+                start_state=start_state,
+                end_state=end_state,
+                defaults=dict(
+                    inverse=False,
+                    transition_type=self.transition_type,
+                    classifier=self,
+                )
+            )
+        elif self.match( column, end_state, start_state ):
+            Transition.objects.update_or_create(
+                column=column,
+                start_state=end_state,
+                end_state=start_state,
+                defaults=dict(
+                    inverse=True,
+                    transition_type=self.transition_type,
+                    classifier=self,
+                )
+            )
+
+
+class RegexTransitionClassifier(TransitionClassifier):
+    start_state_regex = models.CharField(max_length=255)
+    end_state_regex = models.CharField(max_length=255)
+    
+
+    def match(self, column, start_state, end_state):
+        return (re.match( self.start_state_regex, start_state.text ) != None) and (re.match( self.end_state_regex, end_state.text ) != None)
+
+
 class Transition(models.Model):
     column = models.ForeignKey( Column, on_delete=models.CASCADE )
     transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
     inverse = models.BooleanField()
     start_state = models.ForeignKey( State, on_delete=models.CASCADE, related_name="start_state" )
     end_state = models.ForeignKey( State, on_delete=models.CASCADE, related_name="end_state" )
+    classifier = models.ForeignKey( 
+        TransitionClassifier, 
+        null=True, 
+        blank=True, 
+        default=None, 
+        on_delete=models.SET_DEFAULT,
+        help_text="The transition classifer used to automatically assign the transition type for these states." 
+    )
 
     def __str__(self):
         t = self.transition_type_str()
@@ -579,6 +629,8 @@ class Transition(models.Model):
 
     def create_inverse(self):
         return Transition(column=self.column, transition_type=self.transition_type, inverse=(not self.inverse), start_state=self.end_state, end_state=self.start_state)
+
+
 
 
 class Rate(models.Model):

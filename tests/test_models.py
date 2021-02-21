@@ -91,5 +91,22 @@ class AlignmentTest(TestCase):
         
 
 
+class RegexTransitionClassifierTest(TestCase):
+    def setUp(self):
+        self.transition_type = TransitionType.objects.create(name="transition type 1")
+        self.classifier = RegexTransitionClassifier.objects.create(
+            name="classifier 1", 
+            transition_type=self.transition_type,
+            start_state_regex="^hello$",
+            end_state_regex="^world$",
+        )
+        self.state1 = State.objects.create(text="hello")
+        self.state2 = State.objects.create(text="world")
 
+        self.verse = Verse.objects.create(rank=0)
+        self.alignment = Alignment.objects.create(verse=self.verse)
+        self.column = Column.objects.create(alignment=self.alignment, order=0)
 
+    def test_regex_match(self):
+        self.assertEqual( self.classifier.match(self.column, self.state1, self.state2), True )
+        self.assertEqual( self.classifier.match(self.column, self.state2, self.state1), False )
