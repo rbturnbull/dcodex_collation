@@ -601,7 +601,11 @@ class RegexTransitionClassifier(TransitionClassifier):
     
 
     def match(self, column, start_state, end_state):
-        return (re.match( self.start_state_regex, start_state.text ) != None) and (re.match( self.end_state_regex, end_state.text ) != None)
+        if re.match( str(self.start_state_regex), str(start_state.text) ) == None:
+            return False
+        if re.match( str(self.end_state_regex), str(end_state.text) ) == None:
+            return False
+        return True
 
 
 class Transition(models.Model):

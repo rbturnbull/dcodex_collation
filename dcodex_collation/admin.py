@@ -1,4 +1,5 @@
 from django.contrib import admin
+from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 
 from .models import *
 
@@ -15,6 +16,26 @@ class RowAdmin(admin.ModelAdmin):
 @admin.register(Cell)
 class CellAdmin(admin.ModelAdmin):
     raw_id_fields = ("token","state",)    
+
+
+
+class TransitionClassifierChildAdmin(PolymorphicChildModelAdmin):
+    """ Base admin class for all child models """
+    base_model = TransitionClassifier
+
+
+
+@admin.register(RegexTransitionClassifier)
+class RegexTransitionClassifierAdmin(TransitionClassifierChildAdmin):
+    base_model = RegexTransitionClassifier
+
+
+@admin.register(TransitionClassifier)
+class TransitionClassifierParentAdmin(PolymorphicParentModelAdmin):
+    """ The parent model admin """
+    base_model = TransitionClassifier  # Optional, explicitly set here.
+    child_models = (RegexTransitionClassifier, )
+    list_filter = (PolymorphicChildModelFilter,)  # This is optional.
 
 
 class TransitionTypeInline(admin.TabularInline):
