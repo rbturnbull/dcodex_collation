@@ -19,7 +19,7 @@ def get_gap_state():
 def tokenize_strings( transcriptions ):
     return [transcription.tokenize() for transcription in transcriptions]
 
-def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2, exclude_empty=True):
+def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2, exclude_empty=False):
     transcriptions = list(family.transcriptions_at(verse))
     transcriptions = [t for t in transcriptions if '_' not in t.verse.url_ref()] # hack for certain lectionaries
     
