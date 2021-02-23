@@ -564,6 +564,9 @@ class TransitionClassifier(PolymorphicModel):
     name = models.CharField(max_length=255, unique=True)    
     transition_type = models.ForeignKey( TransitionType, on_delete=models.CASCADE )
 
+    def __str__(self):
+        return self.name
+
     def match(self, column, start_state, end_state):
         """ Returns True if this these states should be classified with this object's transition type. """
         raise NotImplementedError("This method is not implemented.")
