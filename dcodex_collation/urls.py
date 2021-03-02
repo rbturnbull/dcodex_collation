@@ -4,7 +4,9 @@ from . import views
 
 urlpatterns = [
     path('alignment/<int:pk>/', views.AlignmentDetailView.as_view(), name='alignment_detail_view'),
-    path('family/<str:family_siglum>/<str:verse_ref>/', views.alignment_for_family, name='alignment_for_family'),
+    # path('family/<str:family_siglum>/<str:verse_ref>/', views.alignment_for_family, name='alignment_for_family'),
+    path('family/<str:family_siglum>/<str:verse_ref>/', views.AlignmentForFamily.as_view(), name='alignment_for_family'),
+
     path('transition/<str:family_siglum>/<str:verse_ref>/<int:column_rank>/<int:pair_rank>/', views.classify_transition_for_pair, name='classify_transition_for_pair'),
     path('shift/', views.shift, name='shift'),
     path('clear_empty/', views.clear_empty, name='clear_empty'),

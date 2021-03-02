@@ -1,7 +1,7 @@
 import numpy as np
 
 from django.shortcuts import render
-from django.views.generic import DetailView, FormView
+from django.views.generic import DetailView, FormView, TemplateView
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.http import Http404
@@ -18,33 +18,41 @@ class AlignmentDetailView(LoginRequiredMixin, DetailView):
     model = Alignment
     template_name = "dcodex_collation/alignment.html"
 
-@login_required
-def alignment_for_family(request, family_siglum, verse_ref):
-    family = get_object_or_404(Family, name=family_siglum)
-    verse = family.get_verse_from_string( verse_ref )
 
-    alignment = Alignment.objects.filter( verse=verse, family=family ).first()
-    
-    if not alignment:
-        raise Http404(f"Alignment not found for verse {verse}.")
-    #     gotoh_param = [6.6995597099885345, -0.9209875054657459, -5.097397327423096, -1.3005714416503906]
-    #     alignment = align_family_at_verse( family, verse, gotoh_param )    
+class AlignmentForFamily(LoginRequiredMixin, TemplateView):
+    template_name = "dcodex_collation/alignment.html"
 
-    #return HttpResponse(str(family.id))
-    next_alignment = Alignment.objects.filter( verse__rank__gt=verse.rank, family=family ).first()
-    prev_alignment = Alignment.objects.filter( verse__rank__lt=verse.rank, family=family ).order_by('-verse__rank').first()
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
 
-    next_verse = next_alignment.verse if next_alignment else None
-    prev_verse = prev_alignment.verse if prev_alignment else None
+        family_siglum = self.kwargs['family_siglum']
+        verse_ref = self.kwargs['verse_ref']
 
-    context = {
-        'alignment':alignment, 
-        'alignments_for_family': Alignment.objects.filter( family=family ),
-        'next_verse': next_verse,
-        'prev_verse': prev_verse,
-    }
+        family = get_object_or_404(Family, name=family_siglum)
+        verse = family.get_verse_from_string( verse_ref )
 
-    return render( request, "dcodex_collation/alignment.html", context=context )
+        alignment = Alignment.objects.filter( verse=verse, family=family ).first()
+        
+        if not alignment:
+            raise Http404(f"Alignment not found for verse {verse}.")
+        #     gotoh_param = [6.6995597099885345, -0.9209875054657459, -5.097397327423096, -1.3005714416503906]
+        #     alignment = align_family_at_verse( family, verse, gotoh_param )    
+
+        #return HttpResponse(str(family.id))
+        next_alignment = Alignment.objects.filter( verse__rank__gt=verse.rank, family=family ).first()
+        prev_alignment = Alignment.objects.filter( verse__rank__lt=verse.rank, family=family ).order_by('-verse__rank').first()
+
+        next_verse = next_alignment.verse if next_alignment else None
+        prev_verse = prev_alignment.verse if prev_alignment else None
+
+        context['alignment'] = alignment
+        context['alignments_for_family'] = Alignment.objects.filter( family=family )
+        context['next_verse'] = next_verse
+        context['prev_verse'] = prev_verse
+
+        return context
+
 
 @login_required
 def clear_empty(request):

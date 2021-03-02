@@ -31,6 +31,7 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         print(f"Too few transcriptions at {verse}")
         return
 
+
     # Distance matrix
     distance_matrix_as_vector = []
     for x_index, x in enumerate(transcriptions):
@@ -83,6 +84,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 
     # Initial Progressive Alignment
     alignment_transcriptions = [[transcription] for transcription in transcriptions]
+
+
     for link_index, link_row in enumerate(linkage):
         node_id = len(transcriptions) + link_index
         left_node_id = int(link_row[0])
@@ -99,14 +102,19 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         #     raise Exception(f"One of the alignments is null. L: {left_alignment}. R: {right_alignment}")
 
         new_alignment = gotoh.msa( left_alignment, right_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
-        print(f"new_alignment = {new_alignment}")
+        # print(f"new_alignment = {new_alignment}")
         alignments.append( new_alignment )
         alignment_transcriptions.append(  alignment_transcriptions[left_node_id] + alignment_transcriptions[right_node_id] )
+        # print(f"left_alignment.shape = {left_alignment.shape}")
+        # print(f"right_alignment.shape = {right_alignment.shape}")
+        # print(f"new_alignment.shape = {new_alignment.shape}")
+
         #
         # if link_index == 6:
         #    break
 
     alignment_array = alignments[-1]
+
     alignment_transcriptions = alignment_transcriptions[-1]
 
     for iteration in range(iterations_count):
@@ -142,6 +150,8 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
         })
 
     print(alignment_array)
+
+    
     
     for order in range( alignment_array.shape[0] ):
         column, _ = Column.objects.update_or_create( order=order, alignment=alignment, defaults={} )
@@ -150,8 +160,11 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
     Row.objects.filter(alignment=alignment).delete()
     for transcription, tokens in zip( alignment_transcriptions, np.rollaxis(alignment_array, 1) ):
         row, _ = Row.objects.update_or_create( transcription=transcription, alignment=alignment )
+        print(f"row: {row.id}. Transcription: {transcription.id}. manuscript {transcription.manuscript}")
         row.create_cells_for_tokens(tokens, id_to_word)    
             #print(cell, row.transcription, column.order, token, state)
+
+    assert len(alignment_transcriptions) == alignment_array.shape[1]
 
     #dn = hierarchy.dendrogram(linkage, orientation='right',labels=[transcription.manuscript.siglum for transcription in transcriptions])
     #plt.show()
