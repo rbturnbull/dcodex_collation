@@ -185,6 +185,8 @@ def pairwise_comparison(request, siglum1, siglum2):
         raise Http404(f"Cannot find manuscript '{siglum2}'")
 
 
+    ignore_transition_type_ids = set(TransitionTypeToIgnore.objects.all().values_list('transition_type__id', flat=True))
+
     column_ids_for_manuscript1 = Cell.objects.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
     column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
 
@@ -221,7 +223,10 @@ def pairwise_comparison(request, siglum1, siglum2):
                 transition = transition.create_inverse()
         if transition:
             # disagreement_transition_names.append( str(transition) )
-            disagreement_transitions.append( transition )
+            if transition.transition_type.id in ignore_transition_type_ids:
+                agreement_count += 1
+            else:
+                disagreement_transitions.append( transition )
 
     context = dict(
         manuscript1=manuscript1,

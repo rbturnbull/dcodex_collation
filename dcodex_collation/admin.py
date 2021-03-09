@@ -64,3 +64,4 @@ admin.site.register(State)
 admin.site.register(Rate)
 
 admin.site.register(Token)
+admin.site.register(TransitionTypeToIgnore)

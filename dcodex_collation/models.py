@@ -692,3 +692,10 @@ class TransitionRate(models.Model):
     def __str__(self):
         transition_string = self.transition_type.str_with_direction(self.inverse) if self.inverse else str(self.transition_type)
         return f"'{transition_string}' at rate '{self.rate}' in '{self.system}'"
+
+
+class TransitionTypeToIgnore(models.Model):
+    transition_type = models.OneToOneField( TransitionType, on_delete=models.CASCADE, help_text="The transition type to treat as non-significant for analysis." )
+
+    def __str__(self):
+        return str(self.transition_type)
