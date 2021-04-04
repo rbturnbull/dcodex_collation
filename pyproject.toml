@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "dcodex_collation"
+version = "1.0.0"
+description = "An extension for DCodex to collate transcriptions"
+authors = ["Robert Turnbull <robert.turnbull@unimelb.edu.au>"]
+license = "Apache 2.0"
+
+[tool.poetry.dependencies]
+python = ">=3.6.1,<4.0"
+dcodex = {git = "https://github.com/rbturnbull/dcodex.git"}
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.3"
+model-bakery = "^1.2.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

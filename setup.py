@@ -6,8 +6,7 @@ requirements = [
     'numpy',
     'pandas>=1.0.5',
     'matplotlib',
-    # "jsonfield>=3.1.0",
-    # "django-ndarray>=0.0.3",
+    'dcodex @ git+https://github.com/rbturnbull/dcodex.git#egg=dcodex',
 ]
 
 setup(

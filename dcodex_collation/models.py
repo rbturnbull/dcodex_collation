@@ -19,6 +19,141 @@ def get_gap_state():
 def tokenize_strings( transcriptions ):
     return [transcription.tokenize() for transcription in transcriptions]
 
+
+def update_alignment( alignment ):
+    for row in alignment.row_set.all():
+        update_transcription_in_alignment( row.transcription, alignment )
+
+
+def update_transcription_in_alignment( transcription, alignment=None, gap_open=-5, gap_extend=-2 ):
+
+    if alignment == None:
+        alignment = Alignment.objects.get(row__transcription=transcription)
+
+    token_strings = tokenize_strings([transcription])[0]
+    tokens = []
+    for token_text in token_strings:
+        token = alignment.token_set.filter()
+        token, _ = Token.objects.update_or_create( alignment=alignment, text=token_text, defaults={
+            "regularized": normalize_transcription(token_text),
+        })
+        tokens.append(token)
+    token_ids = [token.id for token in tokens]
+
+    current_row = alignment.row_set.get(transcription__manuscript=transcription.manuscript)
+    current_tokens = list(current_row.cell_set.exclude(token=None).values_list("token__id", flat=True))
+
+    # Check to see if the tokens are identical, if so, then we don't need to update this row
+    if current_tokens == token_ids:
+        print(f"Transcription for {transcription.manuscript} is up-to-date.")
+        return
+
+    raise Exception("Not implemented")
+
+    # Create Scoring Matrix
+    all_tokens = Token.objects.all()
+    all_token_ids = all_tokens.values_list("token__id", flat=True)
+    all_token_regularized = all_tokens.values_list("regularized", flat=True)
+    token_id_to_index = {k: v for v, k in enumerate(all_token_ids)}
+
+    n = len(all_token_ids)
+    scoring_matrix = np.zeros( (n,n), dtype=np.float32 )
+    for index_i in range(n):
+        token_i = all_token_regularized[index_i]
+        for index_j in range(index_i+1):
+            token_j = all_token_regularized[index_j]
+            scoring_matrix[index_i,index_j] = gotoh.score( token_i, token_j, *gotoh_param )
+
+
+    # Create alignment array from existing alignment
+    rows = alignment.row_set.all()
+    alignment_array = np.zeros( (rows.count(), alignment.column_set.count()), dtype=np.int )
+    for row_index, row in enumerate(rows):
+        row_token_ids = row.cell_set.all().values_list(token__id, flat=True)
+        alignment_array[row_index,:] = np.asarray( [token_id_to_index[token_id] for token_id in row_token_ids] )
+
+    # Create alignment array for current transcription
+    current_transcription_indexes = [ token_id_to_index[token_id] for token_id in token_ids]
+    current_transcription_as_alignment = np.expand_dims( np.asarray(current_transcription_indexes, dtype=np.int ), axis=1)
+
+    # Run MSA
+    pointers = gotoh.pointers( alignment_array, current_transcription_as_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
+
+    # Remove row for out-of-date transcription
+    if current_row:
+        current_row.delete()
+
+    # Create new row for this transcription
+    current_row = Row( alignment=alignment, transcription=transcription )
+    current_row.save()
+
+    # Go through pointers and add gaps as necessary
+    seqlen = max_i + max_j
+    alignment_index = seqlen - 1
+    i = max_i
+    j = max_j
+    p = pointer[i, j]
+
+    while p != gotoh.NONE:
+        if p == gotoh.DIAG:
+            i -= 1
+            j -= 1
+
+            # Rerank column
+
+            # Create new cell for new row
+            alignment[alignment_index,indexes_i] = seqi[i,:]
+            alignment[alignment_index,indexes_j] = seqj[j,:]
+
+
+        elif p == gotoh.LEFT:
+            j -= 1
+
+            alignment[alignment_index,indexes_i] = GAP
+            alignment[alignment_index,indexes_j] = seqj[j,:]
+        elif p == gotoh.UP:
+            i -= 1
+            alignment[alignment_index,indexes_i] = seqi[i,:]
+            alignment[alignment_index,indexes_j] = GAP
+        else:
+            raise Exception('Error with pointer: %i', p)
+
+
+        if (p == gotoh.LEFT and flip) or (p == gotoh.UP and not flip) or (p == gotoh.DIAG):
+            # Rerank the column
+            column_rank = j if flip else i
+            column = alignment.column_set.filter(rank=column_rank)
+            column.rank = alignment_index
+            column.save()
+        else:
+            # Add Gap
+            column = Column(alignment=alignment, rank=alignment_index)
+            column.save()
+            for row in alignment.row_set.exclude(row__id=current_row.id):
+                cell = Cell(row=row, column=column, state=None, token=GAP)
+                cell.save()
+
+        if (p == gotoh.LEFT and not gotoh.flip) or (p == gotoh.UP and flip) or (p == gotoh.DIAG):
+            current_row_rank = i if flip else j
+            index = current_transcription_indexes[current_row_rank]
+            regularized = all_token_regularized[index]
+            state, _ = State.objects.update_or_create( text=regularized )
+            token = all_tokens[index]
+            cell = Cell(row=current_row, column=column, state=state, token=token)
+            cell.save()
+        else:
+            cell = Cell(row=current_row, column=column, state=None, token=GAP)
+            cell.save()
+
+        alignment_index -= 1
+        p = pointer[i, j]
+
+    # Update column ranks
+    alignment.column_set.update(rank=F('rank') + 1 - alignment_index)
+
+    return alignment
+
+
 def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_open=-5, gap_extend=-2, exclude_empty=False):
     transcriptions = list(family.transcriptions_at(verse))
     transcriptions = [t for t in transcriptions if '_' not in t.verse.url_ref()] # hack for certain lectionaries
@@ -176,8 +311,6 @@ def align_family_at_verse(family, verse, gotoh_param, iterations_count = 1, gap_
 class Alignment(models.Model):
     family = models.ForeignKey( Family, on_delete=models.SET_DEFAULT, default=None, null=True, blank=True )
     verse = models.ForeignKey( Verse, on_delete=models.CASCADE )
-    # word_to_id = JSONField(help_text="Vocab dictionary", blank=True, null=True)
-    # id_to_word = NDArrayField(help_text="Index of vocab dictionary", blank=True, null=True)
 
     class Meta:
         ordering = ['family', 'verse']
@@ -538,10 +671,11 @@ class Token(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     text = models.CharField(max_length=255, help_text="The characters of this token/word as they appear in the manuscript text.")
     regularized = models.CharField(max_length=255, help_text="A regularized form of the text of this token.")
-    rank = models.PositiveIntegerField()
+    rank = models.PositiveIntegerField() # is this necessary??
 
     def __str__(self):
         return self.text
+
 
 class Cell(models.Model):
     row = models.ForeignKey( Row, on_delete=models.CASCADE )

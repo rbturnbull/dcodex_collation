@@ -6,7 +6,7 @@ from dcodex.models import *
 from dcodex_collation.models import *
 import numpy as np
 
-class AlignmentTest(TestCase):
+class AlignmentFromTokensTest(TestCase):
     def setUp(self):
         family = baker.make(Family)
         verse = baker.make(Verse)
@@ -89,6 +89,30 @@ class AlignmentTest(TestCase):
         initial_col_order = 2
         self.check_shift( delta, initial_col_order )
         
+
+
+# class AlignmentFromTranscriptionsTest(TestCase):
+#     def setUp(self):
+#         family = baker.make(Family)
+#         verse = baker.make(Verse)
+
+#         manuscript_sigla = [f"MS{x}" for x in range(5)]
+#         transcription_texts = [
+#             "A B C D E",
+#             "A C D E",
+#             "A B C D E F",
+#             "A B C F",
+#             "A B C",
+#         ]
+#         manuscripts = [Manuscript.objects.create(siglum=siglum, name=siglum) for siglum in sigla]
+#         for manuscript, transcription_text in zip(manuscripts, transcription_texts):
+#             family.add_mansucript_all()
+#             manuscript.save_transcription( verse, transcription_text )
+
+#     def test_align_family_at_verse(self)
+#         align_family_at_verse
+
+#         self.assert
 
 
 class RegexTransitionClassifierTest(TestCase):
