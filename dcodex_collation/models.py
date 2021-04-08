@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from dcodex.models import *
 from dcodex.models.markup import *
 from django.urls import reverse
-
+from django.db.models import F
 
 GAP = -1
 
@@ -25,7 +25,7 @@ def update_alignment( alignment ):
         update_transcription_in_alignment( row.transcription, alignment )
 
 
-def update_transcription_in_alignment( transcription, alignment=None, gap_open=-5, gap_extend=-2 ):
+def update_transcription_in_alignment( transcription, gotoh_param, alignment=None, gap_open=-5, gap_extend=-2 ):
 
     if alignment == None:
         alignment = Alignment.objects.get(row__transcription=transcription)
@@ -48,11 +48,10 @@ def update_transcription_in_alignment( transcription, alignment=None, gap_open=-
         print(f"Transcription for {transcription.manuscript} is up-to-date.")
         return
 
-    raise Exception("Not implemented")
 
     # Create Scoring Matrix
-    all_tokens = Token.objects.all()
-    all_token_ids = all_tokens.values_list("token__id", flat=True)
+    all_tokens = Token.objects.filter(alignment=alignment)
+    all_token_ids = all_tokens.values_list("id", flat=True)
     all_token_regularized = all_tokens.values_list("regularized", flat=True)
     token_id_to_index = {k: v for v, k in enumerate(all_token_ids)}
 
@@ -67,10 +66,10 @@ def update_transcription_in_alignment( transcription, alignment=None, gap_open=-
 
     # Create alignment array from existing alignment
     rows = alignment.row_set.all()
-    alignment_array = np.zeros( (rows.count(), alignment.column_set.count()), dtype=np.int )
+    alignment_array = np.zeros( (alignment.column_set.count(), rows.count()), dtype=np.int )
     for row_index, row in enumerate(rows):
-        row_token_ids = row.cell_set.all().values_list(token__id, flat=True)
-        alignment_array[row_index,:] = np.asarray( [token_id_to_index[token_id] for token_id in row_token_ids] )
+        row_token_ids = row.cell_set.all().values_list("token__id", flat=True)
+        alignment_array[:,row_index] = np.asarray( [token_id_to_index[token_id] if token_id != None else GAP for token_id in row_token_ids] )
 
     # Create alignment array for current transcription
     current_transcription_indexes = [ token_id_to_index[token_id] for token_id in token_ids]
@@ -78,6 +77,12 @@ def update_transcription_in_alignment( transcription, alignment=None, gap_open=-
 
     # Run MSA
     pointers = gotoh.pointers( alignment_array, current_transcription_as_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
+    UP, LEFT, DIAG, NONE = gotoh.pointer_constants()
+
+    print(pointers)
+    for column in alignment.column_set.all():
+        print(column.order, 'column.order')
+
 
     # Remove row for out-of-date transcription
     if current_row:
@@ -87,54 +92,71 @@ def update_transcription_in_alignment( transcription, alignment=None, gap_open=-
     current_row = Row( alignment=alignment, transcription=transcription )
     current_row.save()
 
+    print(alignment.ascii())
+
+    print(f"{alignment_array.shape =}")
+    print(f"{current_transcription_as_alignment.shape =}")
+
+    flip = 0
+    max_j = alignment_array.shape[0]
+    max_i = current_transcription_as_alignment.shape[0]
+
+    if max_j > max_i:
+        flip = 1
+        max_i, max_j = max_j, max_i    
+        print("FLIP")
+
     # Go through pointers and add gaps as necessary
     seqlen = max_i + max_j
     alignment_index = seqlen - 1
     i = max_i
     j = max_j
-    p = pointer[i, j]
+    p = pointers[i, j]
 
-    while p != gotoh.NONE:
-        if p == gotoh.DIAG:
+    pointer_code = {1: "UP", 2:"LEFT", 3: "DIAG", 4: "NONE" }
+
+    gap_state = get_gap_state()
+
+    print(f"{max_i =}")
+    print(f"{max_j =}")
+
+    while p != NONE:
+        # Adjust indexes
+        if p == DIAG:
             i -= 1
             j -= 1
-
-            # Rerank column
-
-            # Create new cell for new row
-            alignment[alignment_index,indexes_i] = seqi[i,:]
-            alignment[alignment_index,indexes_j] = seqj[j,:]
-
-
-        elif p == gotoh.LEFT:
+        elif p == LEFT:
             j -= 1
-
-            alignment[alignment_index,indexes_i] = GAP
-            alignment[alignment_index,indexes_j] = seqj[j,:]
-        elif p == gotoh.UP:
+        elif p == UP:
             i -= 1
-            alignment[alignment_index,indexes_i] = seqi[i,:]
-            alignment[alignment_index,indexes_j] = GAP
-        else:
-            raise Exception('Error with pointer: %i', p)
 
-
-        if (p == gotoh.LEFT and flip) or (p == gotoh.UP and not flip) or (p == gotoh.DIAG):
+        print(flip, p, pointer_code[p], ", flip, p")
+        if (p == LEFT and not flip) or (p == UP and flip) or (p == DIAG):
             # Rerank the column
-            column_rank = j if flip else i
-            column = alignment.column_set.filter(rank=column_rank)
-            column.rank = alignment_index
+            column_rank = i if flip else j
+            print(f"looking for column {column_rank}")
+            column = alignment.column_set.filter(order=column_rank).first()
+
+            column.order = alignment_index + seqlen
+            print(f"\tcolumn {column_rank} going to {column.order}")
+
             column.save()
         else:
             # Add Gap
-            column = Column(alignment=alignment, rank=alignment_index)
+            column = Column(alignment=alignment, order=alignment_index + seqlen)
             column.save()
-            for row in alignment.row_set.exclude(row__id=current_row.id):
-                cell = Cell(row=row, column=column, state=None, token=GAP)
+            for row in alignment.row_set.exclude(id=current_row.id):
+                cell = Cell(row=row, column=column, state=gap_state, token=None)
                 cell.save()
 
-        if (p == gotoh.LEFT and not gotoh.flip) or (p == gotoh.UP and flip) or (p == gotoh.DIAG):
-            current_row_rank = i if flip else j
+        print(column.order, 'column.order --------------- ')
+
+        if (p == LEFT and flip) or (p == UP and not flip) or (p == DIAG):
+            current_row_rank = j if flip else i
+            # print(f"{i =}")
+            # print(f"{j =}")
+            # print(f"{current_row_rank =}")
+            # print(f"{current_transcription_indexes =}")
             index = current_transcription_indexes[current_row_rank]
             regularized = all_token_regularized[index]
             state, _ = State.objects.update_or_create( text=regularized )
@@ -142,14 +164,23 @@ def update_transcription_in_alignment( transcription, alignment=None, gap_open=-
             cell = Cell(row=current_row, column=column, state=state, token=token)
             cell.save()
         else:
-            cell = Cell(row=current_row, column=column, state=None, token=GAP)
+            cell = Cell(row=current_row, column=column, state=gap_state, token=None)
             cell.save()
 
         alignment_index -= 1
-        p = pointer[i, j]
+        p = pointers[i, j]
+
+
 
     # Update column ranks
-    alignment.column_set.update(rank=F('rank') + 1 - alignment_index)
+    for column in alignment.column_set.all():
+        print(column.order, 'column.order')
+    print("-------")
+    alignment.column_set.update(order=F('order') - 1 - alignment_index - seqlen)
+    for column in alignment.column_set.all():
+        print(column.order, 'column.order')
+
+    print(alignment.ascii())
 
     return alignment
 
@@ -317,6 +348,28 @@ class Alignment(models.Model):
 
     def __str__(self):
         return f"{self.family} - {self.verse}"
+
+    def ascii(self):
+        string = ""
+
+        rows = self.row_set.all()
+        max_siglum_len = 0
+        for row in rows:
+            max_siglum_len = max(max_siglum_len, len(row.transcription.manuscript.short_name()))
+
+        d = " | "
+        for row in rows:
+            siglum = row.transcription.manuscript.short_name()
+            string += siglum + (" " * (max_siglum_len - len(siglum)))
+
+            for cell in row.cell_set.all():
+                token_string = "–" if not cell.token else cell.token.text
+                max_token_len = cell.column.max_token_len()
+                string += d + token_string + (" " * (max_token_len - len(token_string)))
+
+            string += "\n"
+
+        return string 
 
     def get_absolute_url(self):
         return reverse("alignment_for_family", kwargs={"family_siglum": self.family.name, "verse_ref": self.verse.url_ref() })
@@ -543,6 +596,13 @@ class Column(models.Model):
             return inverse_transition.create_inverse()
         return None
 
+    def max_token_len(self):
+        value = 0
+        for cell in self.cell_set.all():
+            token_text = "-" if not cell.token else cell.token.text
+            value = max(value, len(token_text))
+        return value
+
     def only_punctuation(self):
         states = self.states()
         for state in states:
@@ -671,7 +731,7 @@ class Token(models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     text = models.CharField(max_length=255, help_text="The characters of this token/word as they appear in the manuscript text.")
     regularized = models.CharField(max_length=255, help_text="A regularized form of the text of this token.")
-    rank = models.PositiveIntegerField() # is this necessary??
+    rank = models.PositiveIntegerField(blank=True, null=True, default=None) # DEPRECATED
 
     def __str__(self):
         return self.text

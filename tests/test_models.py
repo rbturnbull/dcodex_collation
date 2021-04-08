@@ -91,28 +91,60 @@ class AlignmentFromTokensTest(TestCase):
         
 
 
-# class AlignmentFromTranscriptionsTest(TestCase):
-#     def setUp(self):
-#         family = baker.make(Family)
-#         verse = baker.make(Verse)
+class AlignmentFromTranscriptionsTest(TestCase):
+    def setUp(self):
+        self.family = baker.make(Family)
+        self.verse = baker.make(Verse)
 
-#         manuscript_sigla = [f"MS{x}" for x in range(5)]
-#         transcription_texts = [
-#             "A B C D E",
-#             "A C D E",
-#             "A B C D E F",
-#             "A B C F",
-#             "A B C",
-#         ]
-#         manuscripts = [Manuscript.objects.create(siglum=siglum, name=siglum) for siglum in sigla]
-#         for manuscript, transcription_text in zip(manuscripts, transcription_texts):
-#             family.add_mansucript_all()
-#             manuscript.save_transcription( verse, transcription_text )
+        self.manuscript_sigla = [f"MS{x}" for x in range(5)]
+        self.transcription_texts = [
+            "A B C D E",
+            "A C D E",
+            "A B C D E F",
+            "A B C F",
+            "A B C",
+        ]
+        self.manuscripts = [Manuscript.objects.create(siglum=siglum, name=siglum) for siglum in self.manuscript_sigla]
+        for manuscript, transcription_text in zip(self.manuscripts, self.transcription_texts):
+            self.family.add_manuscript_all(manuscript)
+            manuscript.save_transcription( self.verse, transcription_text )
 
-#     def test_align_family_at_verse(self)
-#         align_family_at_verse
+        self.gotoh_param = [6.6995597099885345, -0.9209875054657459, -5.097397327423096, -1.3005714416503906]
 
-#         self.assert
+    def test_align_family_at_verse(self):
+        alignment = align_family_at_verse(self.family, self.verse, self.gotoh_param )
+
+        self.assertEqual( len(self.manuscripts), alignment.row_set.count() )
+        self.assertEqual( 6, alignment.column_set.count() )
+
+    def test_ascii(self):
+        alignment = align_family_at_verse(self.family, self.verse, self.gotoh_param )
+
+        ascii = alignment.ascii()
+
+        gold_ascii = """MS0 | A | B | C | D | E | –\nMS1 | A | – | C | D | E | –\nMS2 | A | B | C | D | E | F\nMS3 | A | B | C | – | – | F\nMS4 | A | B | C | – | – | –\n"""
+
+        self.assertEqual( ascii, gold_ascii )
+
+    def test_update_transcription_in_alignment(self):
+        # First create alignment
+        alignment = align_family_at_verse(self.family, self.verse, self.gotoh_param )
+
+        # Change transcription
+        manuscript = self.manuscripts[-1]
+        transcription = manuscript.save_transcription( self.verse, "A G B C" )
+
+        # Update alignment
+        new_alignment = update_transcription_in_alignment( transcription, self.gotoh_param )
+
+        self.assertEqual( alignment.id, new_alignment.id )
+        self.assertEqual( len(self.manuscripts), new_alignment.row_set.count() )
+        self.assertEqual( 7, alignment.column_set.count() )
+
+        for index, column in enumerate(alignment.column_set.all()):
+            # Assert column order values is sequential
+            print(column, column.order)
+            self.assertEqual( index, column.order )
 
 
 class RegexTransitionClassifierTest(TestCase):
