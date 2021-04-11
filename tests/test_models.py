@@ -122,11 +122,48 @@ class AlignmentFromTranscriptionsTest(TestCase):
 
         ascii = alignment.ascii()
 
-        gold_ascii = """MS0 | A | B | C | D | E | –\nMS1 | A | – | C | D | E | –\nMS2 | A | B | C | D | E | F\nMS3 | A | B | C | – | – | F\nMS4 | A | B | C | – | – | –\n"""
+        gold_ascii = (
+            "MS0 | A | B | C | D | E | –\n" +
+            "MS1 | A | – | C | D | E | –\n" +
+            "MS2 | A | B | C | D | E | F\n" +
+            "MS3 | A | B | C | – | – | F\n" +
+            "MS4 | A | B | C | – | – | –\n" 
+        )
 
         self.assertEqual( ascii, gold_ascii )
 
-    def test_update_transcription_in_alignment(self):
+    def test_update_transcription_in_alignment_longer(self):
+        # First create alignment
+        alignment = align_family_at_verse(self.family, self.verse, self.gotoh_param )
+
+        # Change transcription
+        manuscript = self.manuscripts[-1]
+        transcription = manuscript.save_transcription( self.verse, "A B C E F G H" )
+
+        # Update alignment
+        new_alignment = update_transcription_in_alignment( transcription, self.gotoh_param, gap_open=-2, gap_extend=-1 )
+
+        self.assertEqual( alignment.id, new_alignment.id )
+        self.assertEqual( len(self.manuscripts), new_alignment.row_set.count() )
+        self.assertEqual( 8, new_alignment.column_set.count() )
+
+        for index, column in enumerate(new_alignment.column_set.all()):
+            # Assert column order values is sequential
+            print(column, column.order)
+            self.assertEqual( index, column.order )
+
+        gold_ascii = (
+            "MS0 | A | B | C | D | E | – | – | –\n" + 
+            "MS1 | A | – | C | D | E | – | – | –\n" + 
+            "MS2 | A | B | C | D | E | F | – | –\n" + 
+            "MS3 | A | B | C | – | – | F | – | –\n" + 
+            "MS4 | A | B | C | – | E | F | G | H\n"            
+        )
+        print(gold_ascii)
+        print(new_alignment.ascii())
+        self.assertEqual( new_alignment.ascii(), gold_ascii )
+
+    def test_update_transcription_in_alignment_shorter(self):
         # First create alignment
         alignment = align_family_at_verse(self.family, self.verse, self.gotoh_param )
 
@@ -135,16 +172,27 @@ class AlignmentFromTranscriptionsTest(TestCase):
         transcription = manuscript.save_transcription( self.verse, "A G B C" )
 
         # Update alignment
-        new_alignment = update_transcription_in_alignment( transcription, self.gotoh_param )
+        new_alignment = update_transcription_in_alignment( transcription, self.gotoh_param, gap_open=-2, gap_extend=-1 )
 
         self.assertEqual( alignment.id, new_alignment.id )
         self.assertEqual( len(self.manuscripts), new_alignment.row_set.count() )
-        self.assertEqual( 7, alignment.column_set.count() )
+        self.assertEqual( 7, new_alignment.column_set.count() )
 
-        for index, column in enumerate(alignment.column_set.all()):
+        for index, column in enumerate(new_alignment.column_set.all()):
             # Assert column order values is sequential
             print(column, column.order)
             self.assertEqual( index, column.order )
+
+        gold_ascii = (
+            "MS0 | A | – | B | C | D | E | –\n" + 
+            "MS1 | A | – | – | C | D | E | –\n" + 
+            "MS2 | A | – | B | C | D | E | F\n" + 
+            "MS3 | A | – | B | C | – | – | F\n" + 
+            "MS4 | A | G | B | C | – | – | –\n"            
+        )
+        print(gold_ascii)
+        print(new_alignment.ascii())
+        self.assertEqual( new_alignment.ascii(), gold_ascii )
 
 
 class RegexTransitionClassifierTest(TestCase):

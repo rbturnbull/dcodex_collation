@@ -20,9 +20,9 @@ def tokenize_strings( transcriptions ):
     return [transcription.tokenize() for transcription in transcriptions]
 
 
-def update_alignment( alignment ):
+def update_alignment( alignment, **kwargs ):
     for row in alignment.row_set.all():
-        update_transcription_in_alignment( row.transcription, alignment )
+        update_transcription_in_alignment( row.transcription, alignment=alignment, **kwargs )
 
 
 def update_transcription_in_alignment( transcription, gotoh_param, alignment=None, gap_open=-5, gap_extend=-2 ):
@@ -61,8 +61,11 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
         token_i = all_token_regularized[index_i]
         for index_j in range(index_i+1):
             token_j = all_token_regularized[index_j]
-            scoring_matrix[index_i,index_j] = gotoh.score( token_i, token_j, *gotoh_param )
+            scoring_matrix[index_i,index_j] = scoring_matrix[index_j,index_i] = gotoh.score( token_i, token_j, *gotoh_param )
 
+    # print(f"{scoring_matrix =}")
+    # print(f"{gotoh_param =}")
+    # return
 
     # Create alignment array from existing alignment
     rows = alignment.row_set.all()
@@ -76,12 +79,37 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
     current_transcription_as_alignment = np.expand_dims( np.asarray(current_transcription_indexes, dtype=np.int ), axis=1)
 
     # Run MSA
-    pointers = gotoh.pointers( alignment_array, current_transcription_as_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend )
+    pointers = gotoh.pointers( alignment_array, current_transcription_as_alignment, matrix=scoring_matrix, gap_open=gap_open, gap_extend=gap_extend, show_score=False )
     UP, LEFT, DIAG, NONE = gotoh.pointer_constants()
 
-    print(pointers)
-    for column in alignment.column_set.all():
-        print(column.order, 'column.order')
+    # print(pointers)
+    # print(gotoh.gotoh.pointers_ascii(pointers))
+    # raise Exception("show")
+
+
+    # print('current_transcription_as_alignment', current_transcription_as_alignment)
+    # print('current_transcription_as_alignment.shape', current_transcription_as_alignment.shape)
+    all_token_ids = list(all_token_ids)
+    all_token_regularized = list(all_token_regularized)
+    # for x in range(current_transcription_as_alignment.shape[0]):
+    #     print( current_transcription_as_alignment[x,0], all_token_ids[ current_transcription_as_alignment[x,0] ], all_token_regularized[ current_transcription_as_alignment[x,0] ] )
+
+    # print(alignment.ascii())
+
+    # print('xxxxx')
+
+    # print(alignment_array)
+    for x in range(alignment_array.shape[0]):
+        for y in range(alignment_array.shape[1]):
+            regularized_string = "-" if alignment_array[x,y] == GAP else all_token_regularized[ alignment_array[x,y] ]
+            token_id = "-" if alignment_array[x,y] == GAP else all_token_ids[ alignment_array[x,y] ]
+            print( alignment_array[x,y], token_id, regularized_string, end="\t" )
+        print()
+
+
+
+    # for column in alignment.column_set.all():
+    #     print(column.order, 'column.order')
 
 
     # Remove row for out-of-date transcription
@@ -92,10 +120,10 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
     current_row = Row( alignment=alignment, transcription=transcription )
     current_row.save()
 
-    print(alignment.ascii())
+    # print(alignment.ascii())
 
-    print(f"{alignment_array.shape =}")
-    print(f"{current_transcription_as_alignment.shape =}")
+    # print(f"{alignment_array.shape =}")
+    # print(f"{current_transcription_as_alignment.shape =}")
 
     flip = 0
     max_j = alignment_array.shape[0]
@@ -117,8 +145,8 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
 
     gap_state = get_gap_state()
 
-    print(f"{max_i =}")
-    print(f"{max_j =}")
+    # print(f"{max_i =}")
+    # print(f"{max_j =}")
 
     while p != NONE:
         # Adjust indexes
@@ -134,11 +162,11 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
         if (p == LEFT and not flip) or (p == UP and flip) or (p == DIAG):
             # Rerank the column
             column_rank = i if flip else j
-            print(f"looking for column {column_rank}")
+            # print(f"looking for column {column_rank}")
             column = alignment.column_set.filter(order=column_rank).first()
 
             column.order = alignment_index + seqlen
-            print(f"\tcolumn {column_rank} going to {column.order}")
+            # print(f"\tcolumn {column_rank} going to {column.order}")
 
             column.save()
         else:
@@ -149,7 +177,7 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
                 cell = Cell(row=row, column=column, state=gap_state, token=None)
                 cell.save()
 
-        print(column.order, 'column.order --------------- ')
+        # print(column.order, 'column.order --------------- ')
 
         if (p == LEFT and flip) or (p == UP and not flip) or (p == DIAG):
             current_row_rank = j if flip else i
@@ -173,14 +201,14 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
 
 
     # Update column ranks
-    for column in alignment.column_set.all():
-        print(column.order, 'column.order')
-    print("-------")
+    # for column in alignment.column_set.all():
+    #     print(column.order, 'column.order')
+    # print("-------")
     alignment.column_set.update(order=F('order') - 1 - alignment_index - seqlen)
-    for column in alignment.column_set.all():
-        print(column.order, 'column.order')
+    # for column in alignment.column_set.all():
+    #     print(column.order, 'column.order')
 
-    print(alignment.ascii())
+    # print(alignment.ascii())
 
     return alignment
 
@@ -876,6 +904,7 @@ class RateSystem(models.Model):
             return transition_rate
 
         return self.default_rate
+
 
 class TransitionRate(models.Model):
     system = models.ForeignKey( RateSystem, on_delete=models.CASCADE )
