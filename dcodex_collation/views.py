@@ -97,10 +97,11 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
     logging.warning(pairs)
     if pair_rank >= len(pairs):
         column, pair_rank = column.next_pair(pair_rank)
-        pairs = column.state_pairs()
+        if column:
+            pairs = column.state_pairs()
 
     if pair_rank is None:
-        return HttpResponseBadRequest(f"Cannot find pair.")
+        return HttpResponseBadRequest(f"Cannot find pair. Perhaps you have gone past the last location of variation.")
     pair = pairs[pair_rank]
 
     start_state = pair[0]

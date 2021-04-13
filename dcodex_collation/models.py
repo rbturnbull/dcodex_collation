@@ -701,7 +701,8 @@ class Column(models.Model):
         transition = True
         while column is not None and transition is not None:
             column, pair_rank = column.next_pair( pair_rank )
-            transition = column.transition_for_pair(pair_rank)
+            if column:
+                transition = column.transition_for_pair(pair_rank)
         return column, pair_rank
 
     def prev_pair( self, pair_rank ):
