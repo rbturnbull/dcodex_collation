@@ -610,7 +610,7 @@ class Column(models.Model):
     atext_notes = models.TextField(default=None, null=True, blank=True)
 
     class Meta:
-        ordering = ['order']
+        ordering = ['alignment', 'order']
 
     def __str__(self):
         return f"{self.alignment}:{self.order}"

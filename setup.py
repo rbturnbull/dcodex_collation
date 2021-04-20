@@ -6,6 +6,7 @@ requirements = [
     'numpy',
     'pandas>=1.0.5',
     'matplotlib',
+    'plotly',
     'dcodex @ git+https://github.com/rbturnbull/dcodex.git#egg=dcodex',
 ]
 
