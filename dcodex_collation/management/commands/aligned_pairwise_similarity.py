@@ -8,6 +8,15 @@ from dcodex_collation.models import *
 # import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 class Command(BaseCommand):
     help = 'Shows a graph of the pairwise similarity of two manuscripts based on the same states in alignments.'
@@ -16,11 +25,13 @@ class Command(BaseCommand):
         parser.add_argument('siglum1', type=str, help="The siglum the first manuscript.")
         parser.add_argument('siglum2', type=str, help="The siglum the second manuscript.")
         parser.add_argument('--window', type=int, default=15, help="The window size.")
+        parser.add_argument('--full', type=str2bool, nargs='?', const=True, default=False, help="Restricts output to only sections where there enough alignments to fill the window.")
 
     def handle(self, *args, **options):
         manuscript1 = Manuscript.find(options['siglum1'])
         manuscript2 = Manuscript.find(options['siglum2'])
         window = options['window']
+        restrict_window_full = options['full']
 
         if window % 2 == 0:
             raise ValueError(f"Window value of {window} is not allowed. It must be odd.")
@@ -68,7 +79,14 @@ class Command(BaseCommand):
 
         rolling_similarity = []
         for verse_id in intersection_verse_ids_array:
-            count = np.sum(column_counts[ (intersection_verse_ids_array >= verse_id - half_window) & (intersection_verse_ids_array <= verse_id + half_window) ])
+            indexes_in_window = (intersection_verse_ids_array >= verse_id - half_window) & (intersection_verse_ids_array <= verse_id + half_window)
+            verses_in_window = np.sum(indexes_in_window)
+
+            if restrict_window_full and verses_in_window != window:
+                rolling_similarity.append(None)
+                continue
+
+            count = np.sum(column_counts[ indexes_in_window ])
             agreement_count = np.sum(agreements[ (verse_ids_per_cell >= verse_id - half_window) & (verse_ids_per_cell <= verse_id + half_window) ])
             rolling_similarity.append(agreement_count/count*100)
 
