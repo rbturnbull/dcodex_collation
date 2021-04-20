@@ -15,10 +15,17 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('siglum1', type=str, help="The siglum the first manuscript.")
         parser.add_argument('siglum2', type=str, help="The siglum the second manuscript.")
+        parser.add_argument('--window', type=int, default=15, help="The window size.")
 
     def handle(self, *args, **options):
         manuscript1 = Manuscript.find(options['siglum1'])
         manuscript2 = Manuscript.find(options['siglum2'])
+        window = options['window']
+
+        if window % 2 == 0:
+            raise ValueError(f"Window value of {window} is not allowed. It must be odd.")
+
+        half_window = (window - 1)/2
 
         print(f"{manuscript1 =}")
         print(f"{manuscript2 =}")
@@ -60,10 +67,9 @@ class Command(BaseCommand):
         agreements = (states_ms1 == states_ms2)
 
         rolling_similarity = []
-        window = 4
         for verse_id in intersection_verse_ids_array:
-            count = np.sum(column_counts[ (intersection_verse_ids_array >= verse_id - window) & (intersection_verse_ids_array <= verse_id + window) ])
-            agreement_count = np.sum(agreements[ (verse_ids_per_cell >= verse_id - window) & (verse_ids_per_cell <= verse_id + window) ])
+            count = np.sum(column_counts[ (intersection_verse_ids_array >= verse_id - half_window) & (intersection_verse_ids_array <= verse_id + half_window) ])
+            agreement_count = np.sum(agreements[ (verse_ids_per_cell >= verse_id - half_window) & (verse_ids_per_cell <= verse_id + half_window) ])
             rolling_similarity.append(agreement_count/count*100)
 
         rolling_similarity = np.array(rolling_similarity)
