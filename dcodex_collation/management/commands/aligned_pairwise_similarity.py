@@ -24,8 +24,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('siglum1', type=str, help="The siglum the first manuscript.")
         parser.add_argument('siglum2', type=str, help="The siglum the second manuscript.")
-        parser.add_argument('--window', type=int, default=15, help="The window size.")
+        parser.add_argument('--window', type=int, default=15, help="The window size. Default: 15.")
         parser.add_argument('--full', type=str2bool, nargs='?', const=True, default=False, help="Restricts output to only sections where there enough alignments to fill the window.")
+        parser.add_argument('--all-transitions', action='store_true', default=False, help="Forces the code to use all transition types. Default: Ignores transition types registered as TransitionTypeToIgnore.")
 
     def handle(self, *args, **options):
         manuscript1 = Manuscript.find(options['siglum1'])
@@ -52,24 +53,39 @@ class Command(BaseCommand):
         intersection_verse_ids_array = np.array( sorted(intersection_verse_ids) )
 
         states_ms1 = np.array(
-                Cell.objects.filter( 
+            Cell.objects.filter( 
                 row__alignment__verse__id__in=intersection_verse_ids, 
                 row__transcription__manuscript=manuscript1,
-            ).values_list( "state_id", flat=True )
+            ).values_list( "state__id", flat=True )
         )
         states_ms2 = np.array(
-                Cell.objects.filter( 
+            Cell.objects.filter( 
                 row__alignment__verse__id__in=intersection_verse_ids, 
                 row__transcription__manuscript=manuscript2,
-            ).values_list( "state_id", flat=True )
+            ).values_list( "state__id", flat=True )
         )
         verse_ids_per_cell = np.array(
-                Cell.objects.filter( 
+            Cell.objects.filter( 
                 row__alignment__verse__id__in=intersection_verse_ids, 
                 row__transcription__manuscript=manuscript2,
             ).values_list( "row__alignment__verse__id", flat=True )
         )
 
+        # Ignore transitions in transition types to ignore
+        if options['all_transitions'] == False:
+            for to_ignore in TransitionTypeToIgnore.objects.all():
+                for x in range(10):
+                    for transition in Transition.objects.filter( column__alignment__verse__id__in=intersection_verse_ids, transition_type=to_ignore.transition_type ):
+                        
+                        start_state_id = transition.start_state.id
+                        end_state_id = transition.end_state.id
+
+                        print(states_ms2 == max(start_state_id, end_state_id))
+                        print(np.sum(states_ms2 == max(start_state_id, end_state_id)))
+                        print(np.sum(states_ms1 == max(start_state_id, end_state_id)))
+                        np.place( states_ms2, states_ms2 == max(start_state_id, end_state_id), min(start_state_id, end_state_id) )
+                        np.place( states_ms1, states_ms1 == max(start_state_id, end_state_id), min(start_state_id, end_state_id) )
+                        
         verse_class = manuscript1.verse_class()
 
         # This should be optimised

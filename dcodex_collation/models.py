@@ -876,8 +876,6 @@ class Transition(models.Model):
         return Transition(column=self.column, transition_type=self.transition_type, inverse=(not self.inverse), start_state=self.end_state, end_state=self.start_state)
 
 
-
-
 class Rate(models.Model):
     name = models.CharField(max_length=255)
 
