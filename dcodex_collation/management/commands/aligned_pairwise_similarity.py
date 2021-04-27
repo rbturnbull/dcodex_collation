@@ -80,9 +80,9 @@ class Command(BaseCommand):
                         start_state_id = transition.start_state.id
                         end_state_id = transition.end_state.id
 
-                        print(states_ms2 == max(start_state_id, end_state_id))
-                        print(np.sum(states_ms2 == max(start_state_id, end_state_id)))
-                        print(np.sum(states_ms1 == max(start_state_id, end_state_id)))
+                        # print(states_ms2 == max(start_state_id, end_state_id))
+                        # print(np.sum(states_ms2 == max(start_state_id, end_state_id)))
+                        # print(np.sum(states_ms1 == max(start_state_id, end_state_id)))
                         np.place( states_ms2, states_ms2 == max(start_state_id, end_state_id), min(start_state_id, end_state_id) )
                         np.place( states_ms1, states_ms1 == max(start_state_id, end_state_id), min(start_state_id, end_state_id) )
                         
