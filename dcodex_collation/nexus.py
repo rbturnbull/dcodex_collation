@@ -77,12 +77,13 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True):
                     label = "?"
                 else:
                     state_ids = [state.id for state in column.states(allow_ignore)]
-                    print("\n---------")
-                    print('state_ids', state_ids, column)
+                    # print("\n---------")
+                    # print('state_ids', state_ids, column)
                     state = row.state_at(column, allow_ignore)
-                    print('state', state, state.id)
+                    # print('state', state, state.id)
 
                     label = str(state_ids.index(state.id)) if state else "?"
+
                 file.write(label)
 
         file.write("\n")

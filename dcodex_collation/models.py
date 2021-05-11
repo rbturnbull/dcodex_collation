@@ -506,6 +506,7 @@ class Alignment(models.Model):
     def row_ids(self):
         return self.row_set.values_list('id', flat=True)
 
+
 class Row(models.Model):
     transcription = models.ForeignKey( VerseTranscription, on_delete=models.CASCADE )
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
@@ -576,13 +577,13 @@ class Row(models.Model):
             state = cell.state 
 
             if allow_ignore:
-                prev_state = state
+                # prev_state = state
                 transition_type_ids_to_ignore = TransitionTypeToIgnore.objects.all().values_list("transition_type__id", flat=True)
                 transitions_to_process = Transition.objects.filter(transition_type__id__in=transition_type_ids_to_ignore, column=column)
                 while True:
-                    if transition := Transition.objects.filter(start_state=state, start_state__id__gt=F("end_state__id")).first():
+                    if transition := transitions_to_process.filter(start_state=state, start_state__id__gt=F("end_state__id")).first():
                         state = transition.end_state
-                    elif transition := Transition.objects.filter(end_state=state, end_state__id__gt=F("start_state__id")).first():
+                    elif transition := transitions_to_process.filter(end_state=state, end_state__id__gt=F("start_state__id")).first():
                         state = transition.start_state
                     else:
                         break
@@ -666,20 +667,25 @@ class Column(models.Model):
     def states(self, allow_ignore=False):
         states = State.objects.filter(cell__column=self).distinct()
 
-        print('==========')
-        print('states all', states)
+        # print('==========')
+        # print('states all', states)
 
         if allow_ignore:
-            state_ids_to_keep = set()
+            # state_ids_to_keep = set()
             transition_type_ids_to_ignore = TransitionTypeToIgnore.objects.all().values_list("transition_type__id", flat=True)
             transitions_to_process = Transition.objects.filter(transition_type__id__in=transition_type_ids_to_ignore, column=self)
+            # print('transitions_to_process', transitions_to_process)
+            # print(set(transitions_to_process.filter(start_state__id__in=states, start_state__id__gt=F("end_state__id")).values_list('start_state__id', flat=True)))
+            # print(set(transitions_to_process.filter(end_state__id__in=states, end_state__id__gt=F("start_state__id")).values_list('end_state__id', flat=True)) )
+            
             state_ids_to_remove = (
-                set(Transition.objects.filter(start_state__id__in=states, start_state__id__gt=F("end_state__id")).values_list('start_state__id', flat=True)) | 
-                set(Transition.objects.filter(end_state__id__in=states, end_state__id__gt=F("start_state__id")).values_list('end_state__id', flat=True))
+                set(transitions_to_process.filter(start_state__id__in=states, start_state__id__gt=F("end_state__id")).values_list('start_state__id', flat=True)) | 
+                set(transitions_to_process.filter(end_state__id__in=states, end_state__id__gt=F("start_state__id")).values_list('end_state__id', flat=True))
             )
+            # print('state_ids_to_remove', state_ids_to_remove)
             
             states = states.exclude(id__in=state_ids_to_remove)                
-            print('states allow_ignore', states)
+            # print('states allow_ignore', states)
 
 
         return states
