@@ -10,6 +10,7 @@ from dcodex.models import *
 from dcodex.models.markup import *
 from django.urls import reverse
 from django.db.models import F
+from django.db.models import Count
 
 GAP = -1
 
@@ -568,11 +569,25 @@ class Row(models.Model):
             return cell.token.text
         return ""
 
-    def state_at(self,column):
+    def state_at(self, column, allow_ignore=False):
+        state = None
         cell = self.cell_at(column)
         if cell:
-            return cell.state
-        return None
+            state = cell.state 
+
+            if allow_ignore:
+                prev_state = state
+                transition_type_ids_to_ignore = TransitionTypeToIgnore.objects.all().values_list("transition_type__id", flat=True)
+                transitions_to_process = Transition.objects.filter(transition_type__id__in=transition_type_ids_to_ignore, column=column)
+                while True:
+                    if transition := Transition.objects.filter(start_state=state, start_state__id__gt=F("end_state__id")).first():
+                        state = transition.end_state
+                    elif transition := Transition.objects.filter(end_state=state, end_state__id__gt=F("start_state__id")).first():
+                        state = transition.start_state
+                    else:
+                        break
+
+        return state
 
 
 class State(models.Model):
@@ -615,6 +630,13 @@ class Column(models.Model):
     def __str__(self):
         return f"{self.alignment}:{self.order}"
 
+    def later_columns(self):
+        """ Returns all the columns for all the alignemnts in this family after this column. """
+        return (
+            Column.objects.filter(alignment=self.alignment, order__gt=self.order) 
+            | Column.objects.filter(alignment__family=self.alignment.family, alignment__verse__rank__gt=self.alignment.verse.rank)
+        ).order_by("alignment__verse__rank", 'order')
+
     def get_transition(self, start_state, end_state):
         transition = self.transition_set.filter(start_state=start_state, end_state=end_state).first()
         if transition:
@@ -641,11 +663,29 @@ class Column(models.Model):
     def is_empty(self):
         return self.cell_set.exclude(token=None).count() == 0
 
-    def states(self):
-        return State.objects.filter(cell__column=self).distinct()
+    def states(self, allow_ignore=False):
+        states = State.objects.filter(cell__column=self).distinct()
 
-    def state_count(self):
-        return len(self.states())
+        print('==========')
+        print('states all', states)
+
+        if allow_ignore:
+            state_ids_to_keep = set()
+            transition_type_ids_to_ignore = TransitionTypeToIgnore.objects.all().values_list("transition_type__id", flat=True)
+            transitions_to_process = Transition.objects.filter(transition_type__id__in=transition_type_ids_to_ignore, column=self)
+            state_ids_to_remove = (
+                set(Transition.objects.filter(start_state__id__in=states, start_state__id__gt=F("end_state__id")).values_list('start_state__id', flat=True)) | 
+                set(Transition.objects.filter(end_state__id__in=states, end_state__id__gt=F("start_state__id")).values_list('end_state__id', flat=True))
+            )
+            
+            states = states.exclude(id__in=state_ids_to_remove)                
+            print('states allow_ignore', states)
+
+
+        return states
+
+    def state_count(self, allow_ignore=False):
+        return len(self.states(allow_ignore))
 
     def state_pairs(self):
         import itertools
@@ -665,6 +705,10 @@ class Column(models.Model):
         # Check pairs on this column
         if pair_rank + 1 < len(pairs):
             return self, pair_rank + 1
+
+        # TODO use later_columns
+        # columns = self.later_columns()
+        # filter for multiple states
 
         # Check pairs on this alignment
         for column in self.alignment.column_set.filter(order__gt=self.order):
@@ -697,7 +741,16 @@ class Column(models.Model):
         return transition
 
     def next_untagged_pair( self, pair_rank ):
-        column = self
+        later_columns = self.later_columns()
+        column = (
+            later_columns
+                .annotate(transition_count=Count('transition', distinct=True))
+                .annotate(state_count=Count('cell__state', distinct=True))
+                .filter(state_count__gt=1)
+                # Search for columns with transitions fewer than number of state pairs (i.e. state count choose 2)
+                .filter(transition_count__lt=(F("state_count")*(F("state_count")-1)/2) ) 
+                .first()
+        )
         transition = True
         while column is not None and transition is not None:
             column, pair_rank = column.next_pair( pair_rank )

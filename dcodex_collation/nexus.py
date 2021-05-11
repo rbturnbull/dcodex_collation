@@ -1,7 +1,7 @@
 import sys
 from .models import * 
 
-def write_nexus( family, verses, witnesses=None, file=None):
+def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True):
     file = file or sys.stdout
     witnesses = witnesses or family.manuscripts()
 
@@ -16,7 +16,7 @@ def write_nexus( family, verses, witnesses=None, file=None):
             if column.only_punctuation():
                 continue
 
-            state_count = column.state_count()
+            state_count = column.state_count(allow_ignore)
             max_states = max(max_states,state_count)    
             columns_count += 1
 
@@ -40,7 +40,7 @@ def write_nexus( family, verses, witnesses=None, file=None):
             if column.only_punctuation():
                 continue
 
-            state_count = column.state_count()       
+            state_count = column.state_count(allow_ignore)       
             labels = ['State%d' % int(state) for state in range(state_count)]
             file.write("\t\t%d  Character%d / %s,\n" %( index+1, index+1, ". ".join( labels ) ) )
             index += 1
@@ -76,8 +76,12 @@ def write_nexus( family, verses, witnesses=None, file=None):
                 if not row:
                     label = "?"
                 else:
-                    state_ids = [state.id for state in column.states()]
-                    state = row.state_at(column)
+                    state_ids = [state.id for state in column.states(allow_ignore)]
+                    print("\n---------")
+                    print('state_ids', state_ids, column)
+                    state = row.state_at(column, allow_ignore)
+                    print('state', state, state.id)
+
                     label = str(state_ids.index(state.id)) if state else "?"
                 file.write(label)
 

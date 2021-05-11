@@ -109,7 +109,6 @@ def classify_transition_for_pair(request, family_siglum, verse_ref, column_rank,
 
     transition = Transition.objects.filter(column=column, start_state=start_state, end_state=end_state ).first()
 
-
     next_pair_url = column.next_pair_url( pair_rank )
     next_untagged_pair_url = column.next_untagged_pair_url( pair_rank )
 
