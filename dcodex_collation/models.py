@@ -747,7 +747,7 @@ class Column(models.Model):
         return transition
 
     def next_untagged_pair( self, pair_rank ):
-        later_columns = self.later_columns()
+        later_columns = Column.objects.filter(id=self.id) | self.later_columns()
         column = (
             later_columns
                 .annotate(transition_count=Count('transition', distinct=True))
