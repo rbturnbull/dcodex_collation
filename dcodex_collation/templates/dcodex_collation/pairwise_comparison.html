@@ -10,6 +10,8 @@
 
 {% block middle %}
 
+<div class="container">
+
 <h1>Pairwise Comparison</h1>
 <h2>{{ manuscript1 }}</h2>
 <h2>{{manuscript2}}</h2>
@@ -24,29 +26,31 @@
 <p>Of the {{ disagreement_count }} disagreements, the following possible transitions are tagged:</p>
 
 
+<a href="csv" class="btn btn-outline-primary" role="button">CSV <i class="fas fa-file-download"></i></a>
 <table class="table table-hover"  style='text-align: center;'>
     <thead>
       <tr>
         <th scope="col">Column</th>
         <th scope="col">{{ manuscript1.siglum }} State</th>
-        <th scope="col">Tag(s)</th>
+        <th scope="col">Tag Forward <i class="fas fa-long-arrow-alt-right"></i></th>
+        <th scope="col">Tag Backward <i class="fas fa-long-arrow-alt-left"></i></th>
         <th scope="col">{{ manuscript2.siglum }} State</th>
       </tr>
     </thead>
     <tbody>
         {% for transition in disagreement_transitions %}
         <tr>
-            <td><a href='{{ transition.column.alignment.get_absolute_url }}'>{{ transition.column }}</a></td>
-            <td>{{ transition.start_state }}</td>
-            <td><i class="fas fa-long-arrow-alt-right"></i> {{ transition.transition_type_str }}<br>
-                <i class="fas fa-long-arrow-alt-left"></i> {{ transition.inverse_transition_type_str }}
-            </td>
-            <td>{{ transition.end_state }}</td>
+          <td><a href='{{ transition.column.alignment.get_absolute_url }}'>{{ transition.column }}</a></td>
+          <td>{{ transition.start_state }}</td>
+          <td>{{ transition.transition_type_str }}</td>
+          <td>{{ transition.inverse_transition_type_str }}</td>
+          <td>{{ transition.end_state }}</td>
         </tr>
         {% endfor %}
     </tbody>
   </table>
   
+</div>
 
 {% endblock %}
 

@@ -921,6 +921,9 @@ class Transition(models.Model):
         help_text="The transition classifer used to automatically assign the transition type for these states." 
     )
 
+    class Meta:
+        ordering = ['column', 'transition_type']
+
     def __str__(self):
         t = self.transition_type_str()
         return f"'{self.start_state}' → '{self.end_state}' ({t})"
@@ -980,3 +983,52 @@ class TransitionTypeToIgnore(models.Model):
 
     def __str__(self):
         return str(self.transition_type)
+
+
+def find_disagreement_transitions(manuscript1, manuscript2):
+    ignore_transition_type_ids = set(TransitionTypeToIgnore.objects.all().values_list('transition_type__id', flat=True))
+
+    column_ids_for_manuscript1 = Cell.objects.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
+    column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+
+    column_ids_intersection = sorted(set(column_ids_for_manuscript1) & set(column_ids_for_manuscript2))
+
+    total_count = len(column_ids_intersection)
+
+    intersection_cells = Cell.objects.filter( column__id__in=column_ids_intersection )
+
+    states_manuscript1 = intersection_cells.filter(row__transcription__manuscript=manuscript1 ).order_by('column__id').values_list( 'state__id', flat=True )
+    states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
+
+    states_array_manuscript1 = np.array(list(states_manuscript1))
+    states_array_manuscript2 = np.array(list(states_manuscript2))
+
+    agreement_count = np.sum( states_array_manuscript1 == states_array_manuscript2 )
+
+    column_ids_intersection_array = np.array(column_ids_intersection)
+    disagreement_column_ids = column_ids_intersection_array[states_array_manuscript1 != states_array_manuscript2]
+
+    disagreement_states_array_manuscript1 = states_array_manuscript1[ states_array_manuscript1 != states_array_manuscript2 ]
+    disagreement_states_array_manuscript2 = states_array_manuscript2[ states_array_manuscript1 != states_array_manuscript2 ]
+
+
+    # disagreement_transition_names = []
+    disagreement_transitions = []
+
+    for column_id, state1, state2 in zip( disagreement_column_ids, disagreement_states_array_manuscript1, disagreement_states_array_manuscript2 ):
+        transition = Transition.objects.filter( column__id=column_id, start_state__id=state1, end_state__id=state2 ).first()
+
+        if not transition:
+            transition = Transition.objects.filter( column__id=column_id, start_state__id=state2, end_state__id=state1 ).first()
+            if transition:
+                transition = transition.create_inverse()
+        if transition:
+            # disagreement_transition_names.append( str(transition) )
+            if transition.transition_type.id in ignore_transition_type_ids:
+                agreement_count += 1
+            else:
+                disagreement_transitions.append( transition )
+
+    disagreement_transitions = sorted(disagreement_transitions, key = lambda transition: (transition.column.alignment.verse.rank, transition.column.order))
+
+    return agreement_count, total_count, disagreement_transitions

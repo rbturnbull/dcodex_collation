@@ -16,6 +16,7 @@ urlpatterns = [
     path('remove_atext/', views.remove_atext, name='remove_atext'),    
     path('save_atext_notes/', views.save_atext_notes, name='save_atext_notes'),    
     path('alignment-pairwise-comparison/<str:siglum1>/<str:siglum2>/', views.pairwise_comparison, name='alignment-pairwise-comparison'),
+    path('alignment-pairwise-comparison/<str:siglum1>/<str:siglum2>/csv', views.disagreement_transitions_csv, name='alignment-pairwise-comparison-csv'),
     path('alignment-pairwise-comparison/', views.ComparisonTableFormView.as_view(), name='alignment-pairwise-comparison-table'),
     
 ]

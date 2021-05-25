@@ -184,49 +184,7 @@ def pairwise_comparison(request, siglum1, siglum2):
     if not manuscript2:
         raise Http404(f"Cannot find manuscript '{siglum2}'")
 
-
-    ignore_transition_type_ids = set(TransitionTypeToIgnore.objects.all().values_list('transition_type__id', flat=True))
-
-    column_ids_for_manuscript1 = Cell.objects.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
-    column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
-
-    column_ids_intersection = sorted(set(column_ids_for_manuscript1) & set(column_ids_for_manuscript2))
-
-    total_count = len(column_ids_intersection)
-
-    intersection_cells = Cell.objects.filter( column__id__in=column_ids_intersection )
-
-    states_manuscript1 = intersection_cells.filter(row__transcription__manuscript=manuscript1 ).order_by('column__id').values_list( 'state__id', flat=True )
-    states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
-
-    states_array_manuscript1 = np.array(list(states_manuscript1))
-    states_array_manuscript2 = np.array(list(states_manuscript2))
-
-    agreement_count = np.sum( states_array_manuscript1 == states_array_manuscript2 )
-
-    column_ids_intersection_array = np.array(column_ids_intersection)
-    disagreement_column_ids = column_ids_intersection_array[states_array_manuscript1 != states_array_manuscript2]
-
-    disagreement_states_array_manuscript1 = states_array_manuscript1[ states_array_manuscript1 != states_array_manuscript2 ]
-    disagreement_states_array_manuscript2 = states_array_manuscript2[ states_array_manuscript1 != states_array_manuscript2 ]
-
-
-    # disagreement_transition_names = []
-    disagreement_transitions = []
-
-    for column_id, state1, state2 in zip( disagreement_column_ids, disagreement_states_array_manuscript1, disagreement_states_array_manuscript2 ):
-        column = Column.objects.get(id=column_id)
-        transition = Transition.objects.filter( column__id=column_id, start_state__id=state1, end_state__id=state2 ).first()
-        if not transition:
-            transition = Transition.objects.filter( column__id=column_id, start_state__id=state2, end_state__id=state1 ).first()
-            if transition:
-                transition = transition.create_inverse()
-        if transition:
-            # disagreement_transition_names.append( str(transition) )
-            if transition.transition_type.id in ignore_transition_type_ids:
-                agreement_count += 1
-            else:
-                disagreement_transitions.append( transition )
+    agreement_count, total_count, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2)
 
     context = dict(
         manuscript1=manuscript1,
@@ -239,6 +197,34 @@ def pairwise_comparison(request, siglum1, siglum2):
     )
 
     return render( request, "dcodex_collation/pairwise_comparison.html", context=context)
+
+
+@login_required
+def disagreement_transitions_csv(request, siglum1, siglum2):
+    import csv
+
+    manuscript1 = Manuscript.find(siglum1)
+    if not manuscript1:
+        raise Http404(f"Cannot find manuscript '{siglum1}'")
+    manuscript2 = Manuscript.find(siglum2)
+    if not manuscript2:
+        raise Http404(f"Cannot find manuscript '{siglum2}'")
+
+    agreement_count, total_count, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="Disagreements-{siglum1}-{siglum2}.csv"'    
+
+    writer = csv.writer(response)
+    writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2.siglum} State'])
+    for transition in disagreement_transitions:
+        writer.writerow([
+            str(transition.column), 
+            str(transition.start_state),
+            transition.transition_type_str(),
+            transition.inverse_transition_type_str(),
+            str(transition.end_state),
+        ])
+    return response
 
 
 class ComparisonTableFormView(LoginRequiredMixin, FormView):

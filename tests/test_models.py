@@ -194,6 +194,9 @@ class AlignmentFromTranscriptionsTest(TestCase):
         print(new_alignment.ascii())
         self.assertEqual( new_alignment.ascii(), gold_ascii )
 
+    def test_ignore_transitions(self):
+        pass
+
 
 class RegexTransitionClassifierTest(TestCase):
     def setUp(self):
