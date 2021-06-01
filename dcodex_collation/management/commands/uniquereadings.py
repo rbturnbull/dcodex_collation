@@ -29,9 +29,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('family', type=str, help="The siglum for a family of manuscripts.")
         parser.add_argument('sigla', type=str, nargs="+", help="The sigla for the mss in the group.")
-        parser.add_argument('--start', type=str, help="The starting verse of the passage selection.")
-        parser.add_argument('--end', type=str, help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.")
-        parser.add_argument('--file', type=str, help="An output file.")
+        parser.add_argument('-s', '--start', type=str, help="The starting verse of the passage selection.")
+        parser.add_argument('-e', '--end', type=str, help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.")
+        parser.add_argument('-f', '--file', type=str, help="An output file.")
         parser.add_argument('-i', '--ignore', action='store_true', default=False, help="Whether it should ignore transisions in the TransitionsToIgnore group.")
 
     def handle(self, *args, **options):
@@ -43,6 +43,7 @@ class Command(BaseCommand):
         sigla = options['sigla']
         mss_in_group = [Manuscript.find(siglum) for siglum in sigla]
         mss_ids_in_group = [ms.id for ms in mss_in_group]
+        mss_in_group = Manuscript.objects.filter(id__in=mss_ids_in_group)
 
         VerseClass = witnesses_in_family.first().verse_class()
 
@@ -64,6 +65,7 @@ class Command(BaseCommand):
                 "column",
                 "states_in_group",
                 "states_out_of_group",
+                "missing",
                 "url",
             ])
 
@@ -101,12 +103,17 @@ class Command(BaseCommand):
                     if equivalent_state_ids_ingroup & equivalent_state_ids_outgroup:
                         continue
 
+                extant_mss_ids = alignment.row_set.filter(transcription__manuscript__id__in=mss_ids_in_group).values_list('transcription__manuscript__id')
+                missing_mss = mss_in_group.exclude(id__in=extant_mss_ids)
+                missing_mss_sigla = [ms.siglum for ms in missing_mss]
+
                 for csv_writer in csv_writers:
                     csv_writer.writerow([
                         str(column.alignment.verse), 
                         column.order, 
                         "/".join([str(state) for state in states_ingroup]),
                         "/".join([str(state) for state in states_outgroup]),
+                        "/".join(missing_mss_sigla),
                         f"http://{domain_name}{column.alignment.get_absolute_url()}",
                     ])
 
