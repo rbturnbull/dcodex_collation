@@ -10,10 +10,10 @@ class Command(BaseCommand):
         parser.add_argument('family', type=str, help="The siglum for a family of manuscripts.")
         parser.add_argument('start', type=str, help="The starting verse of the passage selection.")
         parser.add_argument('end', type=str, nargs='?', help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.")
-        parser.add_argument('--filename', type=str, help="The path to the NEXUS file to be outputted.")
-        parser.add_argument('--exclude', type=str, nargs='+', help="A list of witnesses to exclude.")
-        parser.add_argument('--witnesses', type=str, nargs='+', help="Restrict to just witnesses in this list.")
-        parser.add_argument('--atext', action='store_true', default=False, help="Includes the A-Text as a witness. Default False.")
+        parser.add_argument('-f', '--file', type=str, help="The path to the NEXUS file to be outputted.")
+        parser.add_argument('-x', '--exclude', type=str, nargs='+', help="A list of witnesses to exclude.")
+        parser.add_argument('-w', '--witnesses', type=str, nargs='+', help="Restrict to just witnesses in this list.")
+        parser.add_argument('-a', '--atext', action='store_true', default=False, help="Includes the A-Text as a witness. Default False.")
 
 
     def handle(self, *args, **options):
@@ -58,8 +58,8 @@ class Command(BaseCommand):
             
             witnesses = witnesses.exclude(id__in=exclude_ids)
 
-        if options['filename']:
-            with open(options['filename'], 'w') as file:
+        if options['file']:
+            with open(options['file'], 'w') as file:
                 write_nexus( family, verses, witnesses, file, atext=options['atext'] )
         else:
             write_nexus( family, verses, witnesses, atext=options['atext'] )
