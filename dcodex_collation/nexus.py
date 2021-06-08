@@ -1,11 +1,13 @@
 import sys
 from .models import * 
 
-def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True):
+def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, atext=False):
     file = file or sys.stdout
     witnesses = witnesses or family.manuscripts()
 
     witnesses_count = witnesses.count()
+    if atext:
+        witnesses_count += 1
     max_states = 0
     columns_count = 0
     for verse in verses:
@@ -57,6 +59,28 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True):
 
     # Write the alignment matrix
     file.write("\tmatrix\n")
+
+    if atext:
+        siglum = "AText"
+        file.write("\t%s%s" % (siglum, " "*(margin-len(siglum)) ))
+
+        for verse in verses:
+            alignment = Alignment.objects.filter(family=family, verse=verse).first()
+            if not alignment: continue
+            for column in alignment.column_set.all():
+                if column.only_punctuation():
+                    continue
+                if not column.atext:
+                    label = "?"
+                else:
+                    state_ids = [state.id for state in column.states(allow_ignore)]
+                    atext_state = column.get_atext_state(allow_ignore)
+                    label = str(state_ids.index(atext_state.id))
+
+                file.write(label)
+        file.write("\n")
+
+
     for witness in witnesses:
         siglum = str(witness.short_name())
 

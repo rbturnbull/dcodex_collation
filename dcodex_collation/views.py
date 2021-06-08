@@ -210,20 +210,10 @@ def disagreement_transitions_csv(request, siglum1, siglum2):
     if not manuscript2:
         raise Http404(f"Cannot find manuscript '{siglum2}'")
 
-    agreement_count, total_count, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2)
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="Disagreements-{siglum1}-{siglum2}.csv"'    
 
-    writer = csv.writer(response)
-    writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2.siglum} State'])
-    for transition in disagreement_transitions:
-        writer.writerow([
-            str(transition.column), 
-            str(transition.start_state),
-            transition.transition_type_str(),
-            transition.inverse_transition_type_str(),
-            str(transition.end_state),
-        ])
+    disagreements_transitions_csv(response)
     return response
 
 

@@ -1,3 +1,4 @@
+import csv
 from django.db import models
 from scipy.cluster import hierarchy
 import gotoh
@@ -813,6 +814,29 @@ class Column(models.Model):
             return ""
         return prev_column.pair_url( prev_pair_rank )
 
+    def get_atext_state(self, allow_ignore=False):
+        state = self.atext
+        if not state:
+            return None
+
+        if allow_ignore:
+            return self.get_equivalent_state( state )
+
+        return state
+
+    def get_equivalent_state(self, state):
+        """ Finds the state with the lowest ID that is equivalent to other states given the objects in the TransitionTypeToIgnore table. """
+        transition_type_ids_to_ignore = TransitionTypeToIgnore.objects.all().values_list("transition_type__id", flat=True)
+        transitions_to_process = Transition.objects.filter(transition_type__id__in=transition_type_ids_to_ignore, column=self)
+        while True:
+            if transition := transitions_to_process.filter(start_state=state, start_state__id__gt=F("end_state__id")).first():
+                state = transition.end_state
+            elif transition := transitions_to_process.filter(end_state=state, end_state__id__gt=F("start_state__id")).first():
+                state = transition.start_state
+            else:
+                break
+        return state
+
     
 
 class Token(models.Model):
@@ -985,11 +1009,15 @@ class TransitionTypeToIgnore(models.Model):
         return str(self.transition_type)
 
 
-def find_disagreement_transitions(manuscript1, manuscript2):
+def find_disagreement_transitions(manuscript1, manuscript2, verses=None):
     ignore_transition_type_ids = set(TransitionTypeToIgnore.objects.all().values_list('transition_type__id', flat=True))
 
-    column_ids_for_manuscript1 = Cell.objects.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
-    column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+    cells = Cell.objects.all()
+    if verses:
+        cells = cells.filter( row__alignment__verse__in=verses )
+
+    column_ids_for_manuscript1 = cells.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
+    column_ids_for_manuscript2 = cells.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
 
     column_ids_intersection = sorted(set(column_ids_for_manuscript1) & set(column_ids_for_manuscript2))
 
@@ -1032,3 +1060,16 @@ def find_disagreement_transitions(manuscript1, manuscript2):
     disagreement_transitions = sorted(disagreement_transitions, key = lambda transition: (transition.column.alignment.verse.rank, transition.column.order))
 
     return agreement_count, total_count, disagreement_transitions
+
+def disagreements_transitions_csv(manuscript1, manuscript2, outfile, verses=None):
+    _, _, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2, verses=verses)
+    writer = csv.writer(outfile)
+    writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2.siglum} State'])
+    for transition in disagreement_transitions:
+        writer.writerow([
+            str(transition.column), 
+            str(transition.start_state),
+            transition.transition_type_str(),
+            transition.inverse_transition_type_str(),
+            str(transition.end_state),
+        ])
