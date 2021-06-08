@@ -1,4 +1,3 @@
-import sys
 from dcodex.models import * 
 from dcodex_collation.models import *
 
@@ -10,8 +9,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('siglum1', type=str, help="The siglum for the first manuscript to compare.")
         parser.add_argument('siglum2', type=str, help="The siglum for the second manuscript to compare.")
-        parser.add_argument('--start', type=str, help="The starting verse of the passage selection.")
-        parser.add_argument('--end', type=str, help="The ending verse of the passage selection.")
+        parser.add_argument('-s', '--start', type=str, help="The starting verse of the passage selection.")
+        parser.add_argument('-e', '--end', type=str, help="The ending verse of the passage selection.")
+        parser.add_argument('-f', '--file', type=str, help="An output file.")
 
     def handle(self, *args, **options):
         siglum1 = options['siglum1']
@@ -30,4 +30,4 @@ class Command(BaseCommand):
         assert manuscript1.verse_class() == manuscript2.verse_class()
         verses = VerseClass.queryset_from_strings( start_verse_string, end_verse_string )
 
-        disagreements_transitions_csv(manuscript1, manuscript2, sys.stdout, verses=verses)
+        disagreements_transitions_csv(manuscript1, manuscript2, verses=verses, file_path=options['file'])

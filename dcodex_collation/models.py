@@ -1,3 +1,4 @@
+import sys
 import csv
 from django.db import models
 from scipy.cluster import hierarchy
@@ -12,6 +13,8 @@ from dcodex.models.markup import *
 from django.urls import reverse
 from django.db.models import F
 from django.db.models import Count
+from django.contrib.sites.models import Site
+
 
 GAP = -1
 
@@ -1061,15 +1064,30 @@ def find_disagreement_transitions(manuscript1, manuscript2, verses=None):
 
     return agreement_count, total_count, disagreement_transitions
 
-def disagreements_transitions_csv(manuscript1, manuscript2, outfile, verses=None):
+def disagreements_transitions_csv(manuscript1, manuscript2, verses=None, file_path=None):
     _, _, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2, verses=verses)
-    writer = csv.writer(outfile)
-    writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2.siglum} State'])
+
+    site = Site.objects.get_current()
+    domain_name = site.domain
+
+    delimiter = "\t"
+    csv_writers = [csv.writer(sys.stdout, delimiter=delimiter)]
+    if file_path:
+        file = open(file_path, "w", newline='')
+        csv_writers.append(csv.writer(file, delimiter=delimiter))
+
+    for writer in csv_writers:
+        writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2.siglum} State', "URL"])
     for transition in disagreement_transitions:
-        writer.writerow([
-            str(transition.column), 
-            str(transition.start_state),
-            transition.transition_type_str(),
-            transition.inverse_transition_type_str(),
-            str(transition.end_state),
-        ])
+        for writer in csv_writers:
+            writer.writerow([
+                str(transition.column), 
+                str(transition.start_state),
+                transition.transition_type_str(),
+                transition.inverse_transition_type_str(),
+                str(transition.end_state),
+                f"http://{domain_name}{transition.column.alignment.get_absolute_url()}",
+            ])
+
+    if file_path:
+        file.close()
