@@ -18,5 +18,5 @@ urlpatterns = [
     path('alignment-pairwise-comparison/<str:siglum1>/<str:siglum2>/', views.pairwise_comparison, name='alignment-pairwise-comparison'),
     path('alignment-pairwise-comparison/<str:siglum1>/<str:siglum2>/csv', views.disagreement_transitions_csv, name='alignment-pairwise-comparison-csv'),
     path('alignment-pairwise-comparison/', views.ComparisonTableFormView.as_view(), name='alignment-pairwise-comparison-table'),
-    
+    path('atext/', views.ATextListView.as_view(), name='atext_list'),    
 ]

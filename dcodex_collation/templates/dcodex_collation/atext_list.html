@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load dcodex_collation_tags %}
+{% block title %}A-Text Locations{% endblock %}
+
+{% block content %}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Family</th>
+            <th scope="col">Verse</th>
+            <th scope="col">Column</th>
+            <th scope="col">A-Text</th>
+            <th scope="col">Other States</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for column in object_list %}
+            <tr>
+                <td>{{ column.alignment.family }}</td>
+                <td><a href='{{ column.alignment.get_absolute_url }}'>{{ column.alignment.verse }}</a></td>
+                <td><a href='{{ column.get_absolute_url }}'>{{ column.order }}</a></td>
+                <td>{{ column.atext }}</td>
+                <td>{{ column.states_non_atext_str }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+
+</table>
+
+{% endblock content %}

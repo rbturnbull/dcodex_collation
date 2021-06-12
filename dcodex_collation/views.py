@@ -1,7 +1,7 @@
 import numpy as np
 
 from django.shortcuts import render
-from django.views.generic import DetailView, FormView, TemplateView
+from django.views.generic import DetailView, FormView, TemplateView, ListView
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from django.http import Http404
@@ -233,3 +233,9 @@ class ComparisonTableFormView(LoginRequiredMixin, FormView):
         return render(self.request, 'dcodex_collation/comparison_table.html', context)
 
 
+class ATextListView( LoginRequiredMixin, ListView ):
+    model = Column
+    template_name = "dcodex_collation/atext_list.html"
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(atext=None)

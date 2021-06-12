@@ -635,6 +635,18 @@ class Column(models.Model):
     def __str__(self):
         return f"{self.alignment}:{self.order}"
 
+    def get_absolute_url(self):
+        # Perhaps it should be better to have a details page
+        return reverse(
+            'classify_transition_for_pair', 
+            kwargs=dict(
+                family_siglum=str(self.alignment.family),
+                verse_ref=self.alignment.verse.url_ref(),
+                column_rank=self.order,
+                pair_rank=0,
+            ),
+        )
+
     def later_columns(self):
         """ Returns all the columns for all the alignemnts in this family after this column. """
         return (
@@ -693,6 +705,15 @@ class Column(models.Model):
 
 
         return states
+
+    def states_non_atext(self, allow_ignore=False):
+        states = self.states(allow_ignore=allow_ignore)
+        if self.atext:
+            return states.exclude(id=self.atext.id)
+        return states
+
+    def states_non_atext_str(self, allow_ignore=False, delimiter=" | "):
+        return delimiter.join([str(state) for state in self.states_non_atext(allow_ignore=allow_ignore)])
 
     def state_count(self, allow_ignore=False):
         return len(self.states(allow_ignore))
