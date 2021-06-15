@@ -3,6 +3,7 @@ from setuptools import setup
 requirements = [
     'Django>3',
     'django-polymorphic',
+    'django-extensions',
     'numpy',
     'pandas>=1.0.5',
     'matplotlib',

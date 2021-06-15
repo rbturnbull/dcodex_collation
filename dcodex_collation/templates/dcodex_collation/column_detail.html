@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load dcodex_collation_tags %}
+{% block title %}{{ transitiontype }}{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <table class="table">
+        <tbody>
+            <tr><td>Family</td><td>{{ column.alignment.family }}</td></tr>
+            <tr><td>Verse</td><td><a href='{{ column.alignment.get_absolute_url }}'>{{ column.alignment.verse }}</a></td></tr>
+            <tr><td>Rank</td><td>{{ column.order }}</td></tr>
+        </tbody>
+    </table>
+    
+    <h2>States</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Text</th>
+                <th scope="col">Manuscripts</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for state in column.states %}
+                <tr>
+                    <td>{{ state }}</td>
+                    <td>
+                        {% for row in column|rows_with_state:state %}
+                            <a href='{{ row.transcription.get_absolute_url }}'>{{row.transcription.manuscript.short_name}}</a>                            
+                        {% endfor %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h2>State Pairs</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Start State</th>
+                <th scope="col">End State</th>
+                <th scope="col">Transition</th>
+                <th scope="col">Classifier</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pair in column.state_pairs %}
+                {% column_pair_row column=column pair=pair pair_rank=forloop.counter0 %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock content %}

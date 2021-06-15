@@ -6,6 +6,7 @@ urlpatterns = [
     path('alignment/<int:pk>/', views.AlignmentDetailView.as_view(), name='alignment_detail_view'),
     # path('family/<str:family_siglum>/<str:verse_ref>/', views.alignment_for_family, name='alignment_for_family'),
     path('family/<str:family_siglum>/<str:verse_ref>/', views.AlignmentForFamily.as_view(), name='alignment_for_family'),
+    path('alignment/<str:family_siglum>/<str:verse_ref>/<int:column_rank>/', views.ColumnDetailView.as_view(), name='column_detail'),
 
     path('transition/<str:family_siglum>/<str:verse_ref>/<int:column_rank>/<int:pair_rank>/', views.classify_transition_for_pair, name='classify_transition_for_pair'),
     path('shift/', views.shift, name='shift'),
@@ -19,4 +20,6 @@ urlpatterns = [
     path('alignment-pairwise-comparison/<str:siglum1>/<str:siglum2>/csv', views.disagreement_transitions_csv, name='alignment-pairwise-comparison-csv'),
     path('alignment-pairwise-comparison/', views.ComparisonTableFormView.as_view(), name='alignment-pairwise-comparison-table'),
     path('atext/', views.ATextListView.as_view(), name='atext_list'),    
+    path('transitiontypes/', views.TransitionTypeListView.as_view(), name='transitiontype_list'),    
+    path('transitiontypes/<str:slug>/', views.TransitionTypeDetailView.as_view(), name='transitiontype_detail'),    
 ]

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load dcodex_collation_tags %}
+{% block title %}Transition Types{% endblock %}
+
+{% block content %}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Transition Type</th>
+            <th scope="col">Inverse</th>
+            <th scope="col">Count</th>
+            <th scope="col">Ignore</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transitiontype in object_list %}
+            <tr>
+                <td><a href='{{ transitiontype.get_absolute_url }}'>{{ transitiontype.name }}</a></td>
+                <td><a href='{{ transitiontype.get_absolute_url }}'>{{ transitiontype.inverse_name }}</a></td>
+                <td>{{ transitiontype.transition_set.count }}</td>
+                <td>{{ transitiontype.ignored }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+
+</table>
+
+{% endblock content %}

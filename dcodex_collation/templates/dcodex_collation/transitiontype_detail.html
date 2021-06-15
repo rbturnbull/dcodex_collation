@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load dcodex_collation_tags %}
+{% block title %}{{ transitiontype }}{% endblock %}
+
+{% block content %}
+
+<h1>{{ transitiontype }}</h1>
+
+<h2>Transitions</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Family</th>
+            <th scope="col">Verse</th>
+            <th scope="col">Column</th>
+            <th scope="col">Inverse</th>
+            <th scope="col">Start State</th>
+            <th scope="col">End State</th>
+            <th scope="col">Classifier</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transition in transitiontype.transition_set.all %}
+            <tr>
+                <td>{{ transition.column.alignment.family }}</td>
+                <td><a href='{{ transition.column.alignment.get_absolute_url }}'>{{ transition.column.alignment.verse }}</a></td>
+                <td><a href='{{ transition.column.get_absolute_url }}'>{{ transition.column.order }}</a></td>
+                <td>{{ transition.inverse }}</td>
+                <td>{{ transition.start_state }}</td>
+                <td>{{ transition.end_state }}</td>
+                <td>{{ transition.classifier }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+
+</table>
+
+{% endblock content %}

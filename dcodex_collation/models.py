@@ -6,6 +6,7 @@ import gotoh
 import numpy as np
 # from jsonfield import JSONField
 # from ndarray import NDArrayField
+
 from scipy.sparse import lil_matrix
 import matplotlib.pyplot as plt
 from dcodex.models import *
@@ -14,7 +15,7 @@ from django.urls import reverse
 from django.db.models import F
 from django.db.models import Count
 from django.contrib.sites.models import Site
-
+from django_extensions.db.fields import AutoSlugField
 
 GAP = -1
 
@@ -636,14 +637,12 @@ class Column(models.Model):
         return f"{self.alignment}:{self.order}"
 
     def get_absolute_url(self):
-        # Perhaps it should be better to have a details page
         return reverse(
-            'classify_transition_for_pair', 
+            'column_detail', 
             kwargs=dict(
                 family_siglum=str(self.alignment.family),
                 verse_ref=self.alignment.verse.url_ref(),
                 column_rank=self.order,
-                pair_rank=0,
             ),
         )
 
@@ -887,9 +886,11 @@ class Cell(models.Model):
             return str(self.token)
         return ""
 
+
 class TransitionType(models.Model):
     name = models.CharField(max_length=255)
     inverse_name = models.CharField(max_length=255, blank=True, null=True, default=None)
+    slug = AutoSlugField(populate_from=['name'])
 
     def __str__(self):
         if not self.inverse_name:
@@ -901,6 +902,12 @@ class TransitionType(models.Model):
 
     class Meta:
         ordering = ['name']
+
+    def get_absolute_url(self):
+        return reverse("transitiontype_detail", kwargs={'slug':self.slug})
+
+    def ignored(self) -> bool:
+        return self.transitiontypetoignore != None
 
 
 class TransitionClassifier(PolymorphicModel):

@@ -1,0 +1,10 @@
+<tr>
+    <td>{{pair.0}}</td>
+    <td>{{pair.1}}</td>
+    <td>
+        {% if transition %} 
+            <a href='{{transition.transition_type.get_absolute_url}}'>{{ transition.transition_type }}</a>
+        {% endif %}
+    </td>
+    <td>{{ transition.classifer }}</td>
+</tr>

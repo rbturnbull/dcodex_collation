@@ -239,3 +239,27 @@ class ATextListView( LoginRequiredMixin, ListView ):
 
     def get_queryset(self):
         return super().get_queryset().exclude(atext=None)
+
+
+class TransitionTypeListView(LoginRequiredMixin, ListView):
+    model = TransitionType
+    template_name = "dcodex_collation/transitiontype_list.html"
+
+
+class TransitionTypeDetailView(LoginRequiredMixin, DetailView):
+    model = TransitionType
+    template_name = "dcodex_collation/transitiontype_detail.html"
+
+
+class ColumnDetailView(LoginRequiredMixin, DetailView):
+    model = Column
+    template_name = "dcodex_collation/column_detail.html"
+    pk_url_kwarg = 'order'
+
+    def get_object(self, queryset=None):
+        family_siglum = self.kwargs['family_siglum']
+        verse_ref = self.kwargs['verse_ref']
+        family = get_object_or_404(Family, name=family_siglum)
+        verse = family.get_verse_from_string( verse_ref )
+        return self.model.objects.get(alignment__verse=verse, alignment__family=family, order=self.kwargs['column_rank'])
+
