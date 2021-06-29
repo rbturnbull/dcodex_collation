@@ -1,6 +1,7 @@
 <tr>
-    <td>{{pair.0}}</td>
-    <td>{{pair.1}}</td>
+    <td><a href="{% url 'classify_transition_for_pair' family_siglum=column.alignment.family.name verse_ref=column.alignment.verse.url_ref column_rank=column.order pair_rank=pair_rank%}">{{pair.0}}</a></td>
+    <td><a href="{% url 'classify_transition_for_pair' family_siglum=column.alignment.family.name verse_ref=column.alignment.verse.url_ref column_rank=column.order pair_rank=pair_rank%}">{{pair.1}}</a></td>
+    
     <td>
         {% if transition %} 
             <a href='{{transition.transition_type.get_absolute_url}}'>{{ transition.transition_type }}</a>

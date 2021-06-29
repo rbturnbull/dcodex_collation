@@ -9,7 +9,7 @@
                 {% endif %}
 
                 {% for column in alignment.column_set_display_order %}
-                    <th scope="col" ><a href="{% url 'classify_transition_for_pair' family_siglum=alignment.family.name verse_ref=alignment.verse.url_ref column_rank=column.order pair_rank=0%}">{{column.order}}</a></th>
+                    <th scope="col" ><a href="{{ column.get_absolute_url }}">{{column.order}}</a></th>
                 {% endfor %}
                 {% if alignment.is_rtl %}
                     <th scope="col">Siglum</th>

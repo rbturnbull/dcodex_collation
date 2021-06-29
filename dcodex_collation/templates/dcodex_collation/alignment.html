@@ -71,10 +71,10 @@ th {
 {% endif %}
 
 <div class="container">
-        {% block alignmenttable %}
+    {% block alignmenttable %}
         {% include 'dcodex_collation/partials/_alignment_table.html' with alignment=alignment %}
-        {% endblock alignmenttable %}
-        <button class="btn btn-outline-danger clearempty" type="button" >Clear Empty Columns</button>
+    {% endblock alignmenttable %}
+    <button class="btn btn-outline-danger clearempty" type="button" >Clear Empty Columns</button>
 </div>
 
 {% endblock %}

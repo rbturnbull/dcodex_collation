@@ -51,4 +51,4 @@ def row_cells_td(alignment, row):
 def column_pair_row(column, pair, pair_rank ):
     transition = column.transition_for_pair(pair_rank)
 
-    return {"pair": pair, 'transition':transition}
+    return {"pair": pair, 'transition':transition, 'pair_rank':pair_rank, 'column':column}
