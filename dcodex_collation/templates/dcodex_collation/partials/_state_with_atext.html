@@ -8,4 +8,4 @@
     <div id="atext-notes-{{state.id}}" class="collapse {% if state == column.atext %}show{% endif %}" >
     <textarea class="form-control text-center atext-notes" id="info{{ state.id }}" data-state="{{ state.id }}" rows="2">{% if state == column.atext %}{{column.atext_notes|blank_if_none}}{%endif%}</textarea>
     <button class="btn btn-outline-success atext-notes-save" data-state="{{ state.id }}" type="button">Save</button>
-    </div>
+</div>

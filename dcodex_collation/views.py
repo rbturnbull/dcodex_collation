@@ -165,9 +165,9 @@ def remove_atext(request):
 @login_required
 def save_atext_notes(request):
     column = get_object_or_404(Column, id=request.POST.get("column"))
-    state = get_object_or_404(State, id=request.POST.get("state"))
-    if column.atext != state:
-        HttpResponseBadRequest("Incorrect state for A-Text on this column.")
+    # state = get_object_or_404(State, id=request.POST.get("state"))
+    # if column.atext != state:
+    #     HttpResponseBadRequest("Incorrect state for A-Text on this column.")
 
     column.atext_notes = request.POST.get("notes")
     column.save()

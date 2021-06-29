@@ -1,11 +1,9 @@
 {% extends "base.html" %}
+{% load dcodex_tags %}
 {% load dcodex_collation_tags %}
 {% block title %}{{ transitiontype }}{% endblock %}
 
 {% block content %}
-
-<div class="container">
-
     <table class="table">
         <tbody>
             <tr><td>Family</td><td>{{ column.alignment.family }}</td></tr>
@@ -19,13 +17,20 @@
         <thead>
             <tr>
                 <th scope="col">Text</th>
+                <th scope="col">A Text</th>
                 <th scope="col">Manuscripts</th>
             </tr>
         </thead>
         <tbody>
             {% for state in column.states %}
+
                 <tr>
                     <td>{{ state }}</td>
+                    <td>
+                        <button class="btn atext {% if state == column.atext %}btn-danger{% else %}btn-outline-danger{%endif%}" data-state="{{ state.id }}" type="button"  data-target="#atext-notes-{{state.id}}">
+                            A Text
+                        </button>
+                    </td>
                     <td>
                         {% for row in column|rows_with_state:state %}
                             <a href='{{ row.transcription.get_absolute_url }}'>{{row.transcription.manuscript.short_name}}</a>                            
@@ -35,6 +40,15 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <h3>A Text Notes</h3>
+    <p id="atext-notes">{{column.atext_notes|blank_if_none}}</p>
+    <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#atext-notes-modal" >Edit</button>
+
+
+
+    
+
     <h2>State Pairs</h2>
     <table class="table">
         <thead>
@@ -54,4 +68,44 @@
 
 </div>
 
+
+
 {% endblock content %}
+
+{% block modal %}
+<div class="modal fade" id="atext-notes-modal" tabindex="-1" role="dialog" aria-labelledby="atext-notes-label" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="atext-notes-label">A Text</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form>
+                <div class="form-group">
+                    <label for="message-text" class="col-form-label">Notes:</label>
+                    <textarea class="form-control" id="atext-notes-text">{% if state == column.atext %}{{column.atext_notes|blank_if_none}}{%endif%}</textarea>
+                </div>
+                </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary atext-notes-save"  data-dismiss="modal">Save</button>
+        </div>
+        </div>
+    </div>
+</div>
+{% endblock modal %}
+
+{% block javascript %}
+<script>
+$( document ).ready(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+    {% include 'dcodex_collation/partials/_atext.js' with column=column %}
+});
+</script>
+
+{% endblock javascript %}
+
