@@ -87,7 +87,7 @@
             <form>
                 <div class="form-group">
                     <label for="message-text" class="col-form-label">Notes:</label>
-                    <textarea class="form-control" id="atext-notes-text">{% if state == column.atext %}{{column.atext_notes|blank_if_none}}{%endif%}</textarea>
+                    <textarea class="form-control" id="atext-notes-text">{{column.atext_notes|blank_if_none}}</textarea>
                 </div>
                 </form>
         </div>
