@@ -27,6 +27,10 @@ class Command(BaseCommand):
         parser.add_argument('--window', type=int, default=15, help="The window size. Default: 15.")
         parser.add_argument('--full', type=str2bool, nargs='?', const=True, default=False, help="Restricts output to only sections where there enough alignments to fill the window.")
         parser.add_argument('--all-transitions', action='store_true', default=False, help="Forces the code to use all transition types. Default: Ignores transition types registered as TransitionTypeToIgnore.")
+        parser.add_argument('--start', type=str, help="The starting verse of the passage selection.")
+        parser.add_argument('--end', type=str, help="The ending verse of the passage selection. If this is not given, then it only uses the start verse.")
+        parser.add_argument('--skip', type=str, nargs='+', help="A list of verses to skip.")
+
 
     def handle(self, *args, **options):
         manuscript1 = Manuscript.find(options['siglum1'])
@@ -49,6 +53,22 @@ class Command(BaseCommand):
 
         intersection_verse_ids = verse_ids_manuscript1 & verse_ids_manuscript2
         print(f"{intersection_verse_ids =}")
+
+        # Use passage selection if given
+        if options['start']:
+            VerseClass = manuscript1.verse_class()
+            assert  manuscript2.verse_class() == VerseClass
+
+            start_verse_string = options['start'] or ""
+            end_verse_string = options['end'] or ""
+
+            selection_verse_ids = set( VerseClass.queryset_from_strings( start_verse_string, end_verse_string ).values_list( "id", flat=True ))
+            intersection_verse_ids = intersection_verse_ids & selection_verse_ids
+
+        # Skip verses if told to
+        if options['skip']:
+            verse_ids_to_skip = set([VerseClass.get_from_string(verse_ref_to_skip).id for verse_ref_to_skip in options['skip']])
+            intersection_verse_ids = intersection_verse_ids - verse_ids_to_skip
 
         intersection_verse_ids_array = np.array( sorted(intersection_verse_ids) )
 
@@ -143,7 +163,9 @@ class Command(BaseCommand):
             )
         )
 
-        xticks = np.linspace( verse_rank[0], verse_rank[-1], 100 )
+
+        ticks_count = min(100, verse_rank[-1]-verse_rank[0]+1 )
+        xticks = np.linspace( verse_rank[0], verse_rank[-1], ticks_count )
         xtick_verses = [verse_class.objects.filter(rank=rank).first() for rank in xticks]
         tick_text = [ verse.reference(abbreviation=True) if verse else "" for verse in xtick_verses]
 
