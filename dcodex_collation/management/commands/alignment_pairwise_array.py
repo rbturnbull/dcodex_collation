@@ -14,8 +14,8 @@ class Command(BaseCommand):
         parser.add_argument('--start', type=str, help="The starting verse of the passage selection.")
         parser.add_argument('--end', type=str, help="The ending verse of the passage selection. If this is not given, then it only uses the start verse.")
         parser.add_argument('-k', '--skip', type=str, nargs='+', help="A list of verses to skip.")
-
-
+        parser.add_argument('-f', '--file', type=str, help="An output CSV file.")
+        parser.add_argument('-t', '--truncate', action='store_true', default=False, help="Truncate the output when printing to screen.")
 
     def handle(self, *args, **options):
         
@@ -36,4 +36,14 @@ class Command(BaseCommand):
         df = pd.DataFrame(data=comparison_array, columns=sigla)
         df['MSS'] = sigla
         df = df.set_index('MSS')
+        
+        if options["file"]:
+            df.to_csv(options["file"])
+
+        if not options['truncate']:
+            pd.set_option('display.max_rows', None)
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.width', None)
+            pd.set_option('display.max_colwidth', None)
+
         print(df)

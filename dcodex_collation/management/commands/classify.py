@@ -11,7 +11,7 @@ class Command(BaseCommand):
         parser.add_argument('family', type=str, help="The siglum for a family of manuscripts.")
         parser.add_argument('classifiers', type=str, nargs="?", help="The classifiers to use. If none specified, then all are used from the database.")
         parser.add_argument('--start', type=str, help="The starting verse of the passage selection.")
-        parser.add_argument('--end', type=str, help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.")
+        parser.add_argument('--end', type=str, help="The ending verse of the passage selection. If this is not given, then it only uses the start verse.")
 
     def handle(self, *args, **options):
         family = Family.objects.get(name=options['family'])
