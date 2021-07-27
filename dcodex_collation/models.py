@@ -17,6 +17,22 @@ from django.db.models import Count
 from django.contrib.sites.models import Site
 from django_extensions.db.fields import AutoSlugField
 
+from next_prev import next_in_order, prev_in_order
+
+class NextPrevMixin():
+    def next_in_order(self, **kwargs):
+        return next_in_order( self, **kwargs )
+
+    def prev_in_order(self, **kwargs):
+        return prev_in_order( self, **kwargs )
+
+    def next_loop(self, **kwargs):
+        return next_in_order(self, loop=True, **kwargs)
+
+    def prev_loop(self, **kwargs):
+        return prev_in_order(self, loop=True, **kwargs)
+
+
 GAP = -1
 
 def get_gap_state():
@@ -624,14 +640,14 @@ class State(models.Model):
         return self.cells().filter(column=column)
 
 
-class Column(models.Model):
+class Column(NextPrevMixin, models.Model):
     alignment = models.ForeignKey( Alignment, on_delete=models.CASCADE )
     order = models.PositiveIntegerField("The rank of this column in the alignment")
     atext = models.ForeignKey( State, on_delete=models.SET_DEFAULT, null=True, blank=True, default=None )
     atext_notes = models.TextField(default=None, null=True, blank=True)
 
     class Meta:
-        ordering = ['alignment', 'order']
+        ordering = ['alignment__verse__rank', 'order']
 
     def __str__(self):
         return f"{self.alignment}:{self.order}"

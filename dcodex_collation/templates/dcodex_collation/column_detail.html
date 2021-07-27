@@ -5,6 +5,18 @@
 
 {% block content %}
 <div class="container">
+
+    {% if column.prev_in_order %}
+        <a href="{{ column.prev_in_order.get_absolute_url }}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ column.prev_in_order }}">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+    {% endif %}
+    {% if column.next_in_order %}
+        <a href="{{ column.next_in_order.get_absolute_url }}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ column.next_in_order }}">
+            <i class="fas fa-arrow-right"></i>
+        </a>
+    {% endif %}
+
     <table class="table">
         <tbody>
             <tr><td>Family</td><td>{{ column.alignment.family }}</td></tr>
