@@ -1,0 +1,6 @@
+[run]
+source = dcodex_collation
+
+[report]
+precision = 2
+

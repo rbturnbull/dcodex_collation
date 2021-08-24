@@ -16,11 +16,13 @@ class Command(BaseCommand):
         parser.add_argument('-k', '--skip', type=str, nargs='+', help="A list of verses to skip.")
         parser.add_argument('-f', '--file', type=str, help="An output CSV file.")
         parser.add_argument('-t', '--truncate', action='store_true', default=False, help="Truncate the output when printing to screen.")
+        parser.add_argument('--atext', action='store_true', default=False, help="Includes the A-Text in the output.")
 
     def handle(self, *args, **options):
         
         manuscripts = [Manuscript.find(siglum) for siglum in options['sigla']]
         sigla = [ms.siglum for ms in manuscripts]
+
         
         VerseClass = manuscripts[0].verse_class()
         start_verse_string = options['start'] or ""
@@ -30,7 +32,11 @@ class Command(BaseCommand):
             verse_ids_to_skip = [VerseClass.get_from_string(verse_ref_to_skip).id for verse_ref_to_skip in options['skip']]
             verses = verses.exclude(id__in=verse_ids_to_skip)
 
-        comparison_array = calc_pairwise_comparison_array(manuscripts, verses)        
+        atext = options['atext']
+        comparison_array = calc_pairwise_comparison_array(manuscripts, verses, atext=atext)        
+        if atext:
+            sigla += ["A-Text"]
+
         # Make a percentage
         comparison_array *= 100.0 
         df = pd.DataFrame(data=comparison_array, columns=sigla)

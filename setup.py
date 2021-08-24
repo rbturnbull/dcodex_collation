@@ -1,19 +1,6 @@
-from setuptools import setup
+#!/usr/bin/env python
 
-requirements = [
-    'Django>3',
-    'django-polymorphic',
-    'django-extensions',
-    'numpy',
-    'pandas>=1.0.5',
-    'matplotlib',
-    'plotly',
-    'django-next-prev',
-    'dcodex @ git+https://github.com/rbturnbull/dcodex.git#egg=dcodex',
-]
+import setuptools
 
-setup(
-    install_requires=requirements,
-)
-
-
+if __name__ == "__main__":
+    setuptools.setup()

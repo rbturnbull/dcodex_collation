@@ -1138,16 +1138,24 @@ def disagreements_transitions_csv(manuscript1, manuscript2, verses=None, file_pa
 
 
 
-def calc_pairwise_comparison_array( manuscripts, verses=None ):
+def calc_pairwise_comparison_array( manuscripts, verses=None, atext: bool=False ):
     ignore_transition_type_ids = set(TransitionTypeToIgnore.objects.all().values_list('transition_type__id', flat=True))
-    comparison_array = np.zeros( (len(manuscripts), len(manuscripts)) )
+    size = len(manuscripts) + int(atext)
+    comparison_array = np.zeros( (size, size) )
+    np.fill_diagonal(comparison_array, 1.0)
+    
     for index1, manuscript1 in enumerate(manuscripts):
-        comparison_array[index1,index1] = 1.0
-        for index2 in range( index1+1, len(manuscripts) ):
-            manuscript2 = manuscripts[index2]
+        for index2 in range( index1+1, size ):
+            if atext and index2 == size - 1:
+                manuscript2 = None
+            else:
+                manuscript2 = manuscripts[index2]
 
             column_ids_for_manuscript1 = Cell.objects.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
-            column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+            if manuscript2:
+                column_ids_for_manuscript2 = Cell.objects.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+            else: # atext
+                column_ids_for_manuscript2 = Column.objects.exclude( atext=None ).values_list('id', flat=True)
 
             column_ids_intersection = set(column_ids_for_manuscript1) & set(column_ids_for_manuscript2)
             if verses:
@@ -1160,7 +1168,10 @@ def calc_pairwise_comparison_array( manuscripts, verses=None ):
             intersection_cells = Cell.objects.filter( column__id__in=column_ids_intersection )
 
             states_manuscript1 = intersection_cells.filter(row__transcription__manuscript=manuscript1 ).order_by('column__id').values_list( 'state__id', flat=True )
-            states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
+            if manuscript2:
+                states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
+            else: # atext
+                states_manuscript2 = Column.objects.filter(id__in=column_ids_intersection).order_by('id').values_list( 'atext__id', flat=True )
 
             states_array_manuscript1 = np.array(list(states_manuscript1))
             states_array_manuscript2 = np.array(list(states_manuscript2))
@@ -1186,4 +1197,5 @@ def calc_pairwise_comparison_array( manuscripts, verses=None ):
                         agreement_count += 1
 
             comparison_array[index1,index2] = comparison_array[index2,index1] = agreement_count/total_count
+    
     return comparison_array
