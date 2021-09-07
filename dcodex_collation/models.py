@@ -1,6 +1,7 @@
 import sys
 import csv
 from django.db import models
+from pathlib import Path
 from scipy.cluster import hierarchy
 import gotoh
 import numpy as np
@@ -1056,7 +1057,12 @@ class TransitionTypeToIgnore(models.Model):
         return str(self.transition_type)
 
 
-def find_disagreement_transitions(manuscript1, manuscript2, verses=None):
+def find_disagreement_transitions(manuscript1, manuscript2=None, verses=None):
+    """ 
+    Returns a tuple with agreement_count, total_count, disagreement_transitions.
+    
+    If manuscript2 is None then that is assumed to be the A-Text.
+    """
     ignore_transition_type_ids = set(TransitionTypeToIgnore.objects.all().values_list('transition_type__id', flat=True))
 
     cells = Cell.objects.all()
@@ -1064,7 +1070,10 @@ def find_disagreement_transitions(manuscript1, manuscript2, verses=None):
         cells = cells.filter( row__alignment__verse__in=verses )
 
     column_ids_for_manuscript1 = cells.filter( row__transcription__manuscript=manuscript1 ).values_list('column__id', flat=True)
-    column_ids_for_manuscript2 = cells.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+    if manuscript2:
+        column_ids_for_manuscript2 = cells.filter( row__transcription__manuscript=manuscript2 ).values_list('column__id', flat=True)
+    else: # atext
+        column_ids_for_manuscript2 = Column.objects.exclude( atext=None ).values_list('id', flat=True)
 
     column_ids_intersection = sorted(set(column_ids_for_manuscript1) & set(column_ids_for_manuscript2))
 
@@ -1073,7 +1082,10 @@ def find_disagreement_transitions(manuscript1, manuscript2, verses=None):
     intersection_cells = Cell.objects.filter( column__id__in=column_ids_intersection )
 
     states_manuscript1 = intersection_cells.filter(row__transcription__manuscript=manuscript1 ).order_by('column__id').values_list( 'state__id', flat=True )
-    states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
+    if manuscript2:
+        states_manuscript2 = intersection_cells.filter(row__transcription__manuscript=manuscript2 ).order_by('column__id').values_list( 'state__id', flat=True )
+    else: # atext
+        states_manuscript2 = Column.objects.filter(id__in=column_ids_intersection).order_by('id').values_list( 'atext__id', flat=True )
 
     states_array_manuscript1 = np.array(list(states_manuscript1))
     states_array_manuscript2 = np.array(list(states_manuscript2))
@@ -1108,7 +1120,12 @@ def find_disagreement_transitions(manuscript1, manuscript2, verses=None):
 
     return agreement_count, total_count, disagreement_transitions
 
-def disagreements_transitions_csv(manuscript1, manuscript2, verses=None, file_path=None):
+def disagreements_transitions_csv(manuscript1, manuscript2=None, verses=None, dest=None):
+    """
+    Writes a CSV file listing the disagreements between two manuscripts.
+    
+    If manuscript2 is None then it is assumed to be the A-Text like in find_disagreement_transitions.
+    """
     _, _, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2, verses=verses)
 
     site = Site.objects.get_current()
@@ -1116,12 +1133,17 @@ def disagreements_transitions_csv(manuscript1, manuscript2, verses=None, file_pa
 
     delimiter = "\t"
     csv_writers = [csv.writer(sys.stdout, delimiter=delimiter)]
-    if file_path:
-        file = open(file_path, "w", newline='')
-        csv_writers.append(csv.writer(file, delimiter=delimiter))
+    file = None
+    if dest:
+        if type(dest) in [str, Path]:
+            file = open(dest, "w", newline='')
+            csv_writers.append(csv.writer(file, delimiter=delimiter))
+        else: # if not a string or a Path then assume it is a stream to output to
+            csv_writers.append(csv.writer(dest, delimiter=delimiter))
 
     for writer in csv_writers:
-        writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2.siglum} State', "URL"])
+        manuscript2_siglum = manuscript2.siglum if manuscript2 else "A-Text"
+        writer.writerow(['Column', f'{manuscript1.siglum} State', 'Tag Forward', 'Tag Backward', f'{manuscript2_siglum} State', "URL"])
     for transition in disagreement_transitions:
         for writer in csv_writers:
             writer.writerow([
@@ -1133,7 +1155,7 @@ def disagreements_transitions_csv(manuscript1, manuscript2, verses=None, file_pa
                 f"http://{domain_name}{transition.column.alignment.get_absolute_url()}",
             ])
 
-    if file_path:
+    if file:
         file.close()
 
 

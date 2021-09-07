@@ -21,13 +21,17 @@ class Command(BaseCommand):
             raise Exception(f"Cannot find manuscript '{siglum1}'")
         manuscript2 = Manuscript.find(siglum2)
         if not manuscript2:
-            raise Exception(f"Cannot find manuscript '{siglum2}'")
+            if siglum2.lower().replace("-","") == "atext":
+                manuscript2 = None
+            else:
+                raise Exception(f"Cannot find manuscript '{siglum2}'")
 
         start_verse_string = options['start'] or ""
         end_verse_string = options['end'] or ""
 
         VerseClass = manuscript1.verse_class()
-        assert manuscript1.verse_class() == manuscript2.verse_class()
+        if manuscript2:
+            assert manuscript1.verse_class() == manuscript2.verse_class()
         verses = VerseClass.queryset_from_strings( start_verse_string, end_verse_string )
 
-        disagreements_transitions_csv(manuscript1, manuscript2, verses=verses, file_path=options['file'])
+        disagreements_transitions_csv(manuscript1, manuscript2, verses=verses, dest=options['file'])

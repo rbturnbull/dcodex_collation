@@ -13,6 +13,15 @@ from .models import *
 from .forms import *
 
 
+def manuscript_or_atext(siglum):
+    manuscript = Manuscript.find(siglum)
+    if not manuscript:
+        if siglum.lower().replace("-","") == "atext":
+            manuscript = None
+        else:
+            raise Http404(f"Cannot find manuscript '{siglum}'")
+    return manuscript
+
 
 class AlignmentDetailView(LoginRequiredMixin, DetailView):
     model = Alignment
@@ -177,14 +186,19 @@ def save_atext_notes(request):
 
 @login_required
 def pairwise_comparison(request, siglum1, siglum2):
-    manuscript1 = Manuscript.find(siglum1)
-    if not manuscript1:
-        raise Http404(f"Cannot find manuscript '{siglum1}'")
-    manuscript2 = Manuscript.find(siglum2)
-    if not manuscript2:
-        raise Http404(f"Cannot find manuscript '{siglum2}'")
+    manuscript1 = manuscript_or_atext(siglum1)
+    manuscript2 = manuscript_or_atext(siglum2)
+    if manuscript1 is None:
+        manuscript1, manuscript2 = manuscript2, manuscript1 
 
     agreement_count, total_count, disagreement_transitions = find_disagreement_transitions(manuscript1, manuscript2)
+
+    if manuscript2 is None:
+        class ATextObject():
+            def __str__(self): return "A Text"
+            def siglum(self): return "A-Text"
+
+        manuscript2 = ATextObject()
 
     context = dict(
         manuscript1=manuscript1,
@@ -200,20 +214,17 @@ def pairwise_comparison(request, siglum1, siglum2):
 
 
 @login_required
-def disagreement_transitions_csv(request, siglum1, siglum2):
-    import csv
-
-    manuscript1 = Manuscript.find(siglum1)
-    if not manuscript1:
-        raise Http404(f"Cannot find manuscript '{siglum1}'")
-    manuscript2 = Manuscript.find(siglum2)
-    if not manuscript2:
-        raise Http404(f"Cannot find manuscript '{siglum2}'")
+def disagreement_transitions_csv_view(request, siglum1, siglum2):
+    manuscript1 = manuscript_or_atext(siglum1)
+    manuscript2 = manuscript_or_atext(siglum2)
+    if manuscript1 is None:
+        manuscript1, manuscript2 = manuscript2, manuscript1 
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="Disagreements-{siglum1}-{siglum2}.csv"'    
 
-    disagreements_transitions_csv(response)
+    disagreements_transitions_csv(manuscript1=manuscript1, manuscript2=manuscript2, dest=response)
+    
     return response
 
 
