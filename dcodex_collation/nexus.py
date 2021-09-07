@@ -44,7 +44,9 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
 
             state_count = column.state_count(allow_ignore)       
             labels = ['State%d' % int(state) for state in range(state_count)]
-            file.write("\t\t%d  Character%d / %s,\n" %( index+1, index+1, ". ".join( labels ) ) )
+            labels_joined = ". ".join( labels )
+            column_name = f"{column.alignment.verse.url_ref()}:{column.order}"
+            file.write(f"\t\t{index+1}  Column-{column_name} / {labels_joined}, \n")
             index += 1
     file.write("\t;\n")
 
