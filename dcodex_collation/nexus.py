@@ -105,13 +105,14 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
                     state_ids = [state.id for state in column.states(allow_ignore)]
                     # print("\n---------")
                     # print('state_ids', state_ids, column)
+                    # print('column.states', column.states())
                     state = row.state_at(column, allow_ignore)
                     # print('state', state, state.id)
 
                     try:
                         label = str(state_ids.index(state.id)) if state else "?"
                     except Exception as err:
-                        raise Exception(f"Cannot find label for column {column} row {row} verse {verse} witness {witness}.")
+                        raise Exception(f"Cannot find label for column {column} row {row} verse {verse} witness {witness}.\nstate = {state} ({state.id})\n state_ids = {state_ids}")
 
 
                 file.write(label)

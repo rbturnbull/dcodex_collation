@@ -400,6 +400,10 @@ class Alignment(models.Model):
     def __str__(self):
         return f"{self.family} - {self.verse}"
 
+    def delete_invalid_transitions(self):
+        for column in self.column_set.all():
+            column.delete_invalid_transitions()
+
     def ascii(self):
         string = ""
 
@@ -721,6 +725,28 @@ class Column(NextPrevMixin, models.Model):
 
 
         return states
+
+    def invalid_transitions(self):
+        states = self.states()
+        transitions = Transition.objects.filter(column=self)
+
+        return transitions.exclude(start_state__id__in=states) | transitions.exclude(end_state__id__in=states)
+
+
+
+    def delete_invalid_transitions(self):
+        """ Removes transitions where the state is no longer in one of the states for the cell. """
+        invalid_transitions = self.invalid_transitions()
+        if invalid_transitions.count():
+            print(f"Column: {self}")
+            print(f'\tstates: {self.states()}')
+            print(f'\tinvalid_transitions: {invalid_transitions}')
+            invalid_transitions.delete()
+    
+        # transitions.exclude(start_state__id__in=states).delete()
+        # transitions.exclude(end_state__id__in=states).delete()
+        # print(transitions.exclude(start_state__id__in=states).delete())
+        # print(transitions.exclude(end_state__id__in=states).delete())
 
     def states_non_atext(self, allow_ignore=False):
         states = self.states(allow_ignore=allow_ignore)
