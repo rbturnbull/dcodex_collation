@@ -44,8 +44,20 @@ def tokenize_strings( transcriptions ):
 
 
 def update_alignment( alignment, **kwargs ):
-    for row in alignment.row_set.all():
-        update_transcription_in_alignment( row.transcription, alignment=alignment, **kwargs )
+    # for row in alignment.row_set.all():
+    #     update_transcription_in_alignment( row.transcription, alignment=alignment, **kwargs )
+
+    # Check to see if there are new transcriptions for this verse
+    mss_ids_in_alignment = alignment.row_set.values_list("transcription__manuscript__id", flat=True)
+    family = alignment.family
+    verse = alignment.verse
+    family_transcriptions = VerseTranscription.objects.filter(id__in=[t.id for t in family.transcriptions_at(verse)])
+    new_transcriptions = family_transcriptions.exclude(manuscript__id__in=mss_ids_in_alignment)
+    print(new_transcriptions)
+    for transcription in new_transcriptions:
+        update_transcription_in_alignment( transcription, alignment=alignment, **kwargs )
+
+    # TODO Remove rows for deleted transcriptions
 
 
 def update_transcription_in_alignment( transcription, gotoh_param, alignment=None, gap_open=-5, gap_extend=-2 ):
@@ -63,8 +75,11 @@ def update_transcription_in_alignment( transcription, gotoh_param, alignment=Non
         tokens.append(token)
     token_ids = [token.id for token in tokens]
 
-    current_row = alignment.row_set.get(transcription__manuscript=transcription.manuscript)
-    current_tokens = list(current_row.cell_set.exclude(token=None).values_list("token__id", flat=True))
+    current_row = alignment.row_set.filter(transcription__manuscript=transcription.manuscript).first()
+    if current_row: 
+        current_tokens = list(current_row.cell_set.exclude(token=None).values_list("token__id", flat=True))
+    else:
+        current_tokens = []
 
     # Check to see if the tokens are identical, if so, then we don't need to update this row
     if current_tokens == token_ids:
