@@ -44,8 +44,8 @@ def tokenize_strings( transcriptions ):
 
 
 def update_alignment( alignment, **kwargs ):
-    # for row in alignment.row_set.all():
-    #     update_transcription_in_alignment( row.transcription, alignment=alignment, **kwargs )
+    for row in alignment.row_set.all():
+        update_transcription_in_alignment( row.transcription, alignment=alignment, **kwargs )
 
     # Check to see if there are new transcriptions for this verse
     mss_ids_in_alignment = alignment.row_set.values_list("transcription__manuscript__id", flat=True)
@@ -53,8 +53,8 @@ def update_alignment( alignment, **kwargs ):
     verse = alignment.verse
     family_transcriptions = VerseTranscription.objects.filter(id__in=[t.id for t in family.transcriptions_at(verse)])
     new_transcriptions = family_transcriptions.exclude(manuscript__id__in=mss_ids_in_alignment)
-    print(new_transcriptions)
     for transcription in new_transcriptions:
+        print(f"Adding {transcription.manuscript.siglum} to alignment.")
         update_transcription_in_alignment( transcription, alignment=alignment, **kwargs )
 
     # TODO Remove rows for deleted transcriptions

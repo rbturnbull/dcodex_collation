@@ -61,17 +61,19 @@ class Command(BaseCommand):
 
         for csv_writer in csv_writers:
             csv_writer.writerow([
-                "verse",
-                "column",
+                "verse:column",
+                "url",
                 "state",
                 "group_count",
                 "group_agree",
                 "group_disagree",
+                "group_disagree_states",
+                "group_missing",
                 "outgroup_count",
                 "outgroup_agree",
                 "outgroup_disagree",
+                "outgroup_disagree_states",
                 "difference",
-                "url",
             ])
 
         site = Site.objects.get_current()
@@ -120,20 +122,29 @@ class Command(BaseCommand):
                 outgroup_agree = [cell.row.transcription.manuscript.siglum for cell in cells_outgroup.filter(state=state)]
                 outgroup_disagree = [cell.row.transcription.manuscript.siglum for cell in cells_outgroup.exclude(state=state)]
                 outgroup_count = len(outgroup_agree)
+
+                extant_mss_ids = alignment.row_set.filter(transcription__manuscript__id__in=mss_ids_in_group).values_list('transcription__manuscript__id')
+                missing_mss = mss_in_group.exclude(id__in=extant_mss_ids)
+                missing_mss_sigla = [ms.siglum for ms in missing_mss]
+
+                group_disagree_states = states_ingroup.exclude(id=state.id)
+                outgroup_disagree_states = states_outgroup.exclude(id=state.id)
                 
                 for csv_writer in csv_writers:
                     csv_writer.writerow([
-                        str(column.alignment.verse), 
-                        column.order, 
+                        f"{column.alignment.verse}:{column.order}",
+                        f"http://{domain_name}{column.alignment.get_absolute_url()}",
                         state,
                         group_count,
                         "/".join(group_agree),
                         "/".join(group_disagree),
+                        "/".join([str(state) for state in group_disagree_states]),
+                        "/".join(missing_mss_sigla),
                         outgroup_count,
                         "/".join(outgroup_agree),
                         "/".join(outgroup_disagree),
+                        "/".join([str(state) for state in outgroup_disagree_states]),
                         group_count-outgroup_count,
-                        f"http://{domain_name}{column.alignment.get_absolute_url()}",
                     ])
 
         if file:
