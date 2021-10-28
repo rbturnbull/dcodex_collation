@@ -5,7 +5,7 @@ from dcodex_collation.models import Alignment
 
 
 class Command(BaseCommand):
-    help = 'Deletes transitions where the columns no longer have those states.'
+    help = "Deletes transitions where the columns no longer have those states."
 
     def handle(self, *args, **options):
 

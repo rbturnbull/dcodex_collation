@@ -1,7 +1,10 @@
 import sys
-from .models import * 
+from .models import *
 
-def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, atext=False):
+
+def write_nexus(
+    family, verses, witnesses=None, file=None, allow_ignore=True, atext=False
+):
     file = file or sys.stdout
     witnesses = witnesses or family.manuscripts()
 
@@ -12,39 +15,41 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
     columns_count = 0
     for verse in verses:
         alignment = Alignment.objects.filter(family=family, verse=verse).first()
-        if not alignment: continue
+        if not alignment:
+            continue
 
         for column in alignment.column_set.all():
             if column.only_punctuation():
                 continue
 
             state_count = column.state_count(allow_ignore)
-            max_states = max(max_states,state_count)    
+            max_states = max(max_states, state_count)
             columns_count += 1
 
     file.write("#NEXUS\n")
     file.write("begin data;\n")
     file.write("\tdimensions ntax=%d nchar=%d;\n" % (witnesses_count, columns_count))
-    file.write("\tformat datatype=Standard interleave=no gap=- missing=? ")    
-    symbols =  "0123456789"
+    file.write("\tformat datatype=Standard interleave=no gap=- missing=? ")
+    symbols = "0123456789"
     max_states = len(symbols)
     file.write('symbols="')
     for x in range(max_states):
-        file.write( "%s" % symbols[x] )
-    file.write("\";\n")
-    
-    file.write('\tCHARSTATELABELS\n')
+        file.write("%s" % symbols[x])
+    file.write('";\n')
+
+    file.write("\tCHARSTATELABELS\n")
     index = 0
     for verse in verses:
         alignment = Alignment.objects.filter(family=family, verse=verse).first()
-        if not alignment: continue
+        if not alignment:
+            continue
         for column in alignment.column_set.all():
             if column.only_punctuation():
                 continue
 
-            state_count = column.state_count(allow_ignore)       
-            labels = ['State%d' % int(state) for state in range(state_count)]
-            labels_joined = ". ".join( labels )
+            state_count = column.state_count(allow_ignore)
+            labels = ["State%d" % int(state) for state in range(state_count)]
+            labels_joined = ". ".join(labels)
             column_name = f"{column.alignment.verse.url_ref()}:{column.order}"
             file.write(f"\t\t{index+1}  Column-{column_name} / {labels_joined}, \n")
             index += 1
@@ -56,7 +61,7 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
         siglum = str(witness.short_name())
         if len(siglum) > max_siglum_length:
             max_siglum_length = len(siglum)
-    
+
     margin = max_siglum_length + 5
 
     # Write the alignment matrix
@@ -64,11 +69,12 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
 
     if atext:
         siglum = "AText"
-        file.write("\t%s%s" % (siglum, " "*(margin-len(siglum)) ))
+        file.write("\t%s%s" % (siglum, " " * (margin - len(siglum))))
 
         for verse in verses:
             alignment = Alignment.objects.filter(family=family, verse=verse).first()
-            if not alignment: continue
+            if not alignment:
+                continue
             for column in alignment.column_set.all():
                 if column.only_punctuation():
                     continue
@@ -82,19 +88,20 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
                 file.write(label)
         file.write("\n")
 
-
     for witness in witnesses:
         siglum = str(witness.short_name())
 
         # Write the siglum and leave a gap for the margin
-        file.write("\t%s%s" % (siglum, " "*(margin-len(siglum)) ))
+        file.write("\t%s%s" % (siglum, " " * (margin - len(siglum))))
 
         for verse in verses:
-            #print(verse)
+            # print(verse)
             alignment = Alignment.objects.filter(family=family, verse=verse).first()
-            if not alignment: continue
-            row = Row.objects.filter(transcription__manuscript=witness, alignment=alignment).first()
-            
+            if not alignment:
+                continue
+            row = Row.objects.filter(
+                transcription__manuscript=witness, alignment=alignment
+            ).first()
 
             for column in alignment.column_set.all():
                 if column.only_punctuation():
@@ -112,12 +119,13 @@ def write_nexus( family, verses, witnesses=None, file=None, allow_ignore=True, a
                     try:
                         label = str(state_ids.index(state.id)) if state else "?"
                     except Exception as err:
-                        raise Exception(f"Cannot find label for column {column} row {row} verse {verse} witness {witness}.\nstate = {state} ({state.id})\n state_ids = {state_ids}")
-
+                        raise Exception(
+                            f"Cannot find label for column {column} row {row} verse {verse} witness {witness}.\nstate = {state} ({state.id})\n state_ids = {state_ids}"
+                        )
 
                 file.write(label)
 
         file.write("\n")
 
-    file.write('\t;\n')
-    file.write('end;\n')
+    file.write("\t;\n")
+    file.write("end;\n")

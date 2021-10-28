@@ -2,8 +2,10 @@
 
 from django.db import migrations
 
+
 def migrate_data_forward(apps, schema_editor):
     from dcodex_collation.models import TransitionType
+
     for instance in TransitionType.objects.all():
         instance.save()
 
@@ -11,7 +13,7 @@ def migrate_data_forward(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcodex_collation', '0009_auto_20210612_1823'),
+        ("dcodex_collation", "0009_auto_20210612_1823"),
     ]
 
     operations = [

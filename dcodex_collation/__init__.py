@@ -1,1 +1,1 @@
-default_app_config = 'dcodex_collation.apps.DcodexCollationConfig'
+default_app_config = "dcodex_collation.apps.DcodexCollationConfig"

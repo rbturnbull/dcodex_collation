@@ -7,15 +7,30 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcodex_collation', '0004_auto_20210221_0238'),
+        ("dcodex_collation", "0004_auto_20210221_0238"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='TransitionTypeToIgnore',
+            name="TransitionTypeToIgnore",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('transition_type', models.ForeignKey(help_text='The transition type to treat as non-significant for analysis.', on_delete=django.db.models.deletion.CASCADE, to='dcodex_collation.transitiontype')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "transition_type",
+                    models.ForeignKey(
+                        help_text="The transition type to treat as non-significant for analysis.",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="dcodex_collation.transitiontype",
+                    ),
+                ),
             ],
         ),
     ]

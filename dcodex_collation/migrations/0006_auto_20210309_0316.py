@@ -7,13 +7,17 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dcodex_collation', '0005_transitiontypetoignore'),
+        ("dcodex_collation", "0005_transitiontypetoignore"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='transitiontypetoignore',
-            name='transition_type',
-            field=models.OneToOneField(help_text='The transition type to treat as non-significant for analysis.', on_delete=django.db.models.deletion.CASCADE, to='dcodex_collation.transitiontype'),
+            model_name="transitiontypetoignore",
+            name="transition_type",
+            field=models.OneToOneField(
+                help_text="The transition type to treat as non-significant for analysis.",
+                on_delete=django.db.models.deletion.CASCADE,
+                to="dcodex_collation.transitiontype",
+            ),
         ),
     ]
