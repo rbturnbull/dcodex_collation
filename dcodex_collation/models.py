@@ -6,11 +6,6 @@ from scipy.cluster import hierarchy
 import gotoh
 import numpy as np
 
-# from jsonfield import JSONField
-# from ndarray import NDArrayField
-
-from scipy.sparse import lil_matrix
-import matplotlib.pyplot as plt
 from dcodex.models import *
 from dcodex.models.markup import *
 from django.urls import reverse
@@ -1303,7 +1298,7 @@ class TransitionTypeToIgnore(models.Model):
         return str(self.transition_type)
 
 
-def find_disagreement_transitions(manuscript1, manuscript2=None, verses=None):
+def find_disagreement_transitions(manuscript1, manuscript2=None, columns=None):
     """
     Returns a tuple with agreement_count, total_count, disagreement_transitions.
 
@@ -1316,8 +1311,8 @@ def find_disagreement_transitions(manuscript1, manuscript2=None, verses=None):
     )
 
     cells = Cell.objects.all()
-    if verses:
-        cells = cells.filter(row__alignment__verse__in=verses)
+    if columns:
+        cells = cells.filter(column__in=columns)
 
     column_ids_for_manuscript1 = cells.filter(
         row__transcription__manuscript=manuscript1
@@ -1411,7 +1406,7 @@ def find_disagreement_transitions(manuscript1, manuscript2=None, verses=None):
 
 
 def disagreements_transitions_csv(
-    manuscript1, manuscript2=None, verses=None, dest=None
+    manuscript1, manuscript2=None, columns=None, dest=None
 ):
     """
     Writes a CSV file listing the disagreements between two manuscripts.
@@ -1419,7 +1414,7 @@ def disagreements_transitions_csv(
     If manuscript2 is None then it is assumed to be the A-Text like in find_disagreement_transitions.
     """
     _, _, disagreement_transitions = find_disagreement_transitions(
-        manuscript1, manuscript2, verses=verses
+        manuscript1, manuscript2, columns=columns
     )
 
     site = Site.objects.get_current()
@@ -1464,12 +1459,15 @@ def disagreements_transitions_csv(
         file.close()
 
 
-def calc_pairwise_comparison_array(manuscripts, verses=None, atext: bool = False):
+def calc_pairwise_comparison_array(manuscripts, columns=None, atext: bool = False):
     ignore_transition_type_ids = set(
         TransitionTypeToIgnore.objects.all().values_list(
             "transition_type__id", flat=True
         )
     )
+    if columns is None:
+        columns = Column.objects.all()
+
     size = len(manuscripts) + int(atext)
     comparison_array = np.zeros((size, size))
     np.fill_diagonal(comparison_array, 1.0)
@@ -1482,27 +1480,22 @@ def calc_pairwise_comparison_array(manuscripts, verses=None, atext: bool = False
                 manuscript2 = manuscripts[index2]
 
             column_ids_for_manuscript1 = Cell.objects.filter(
-                row__transcription__manuscript=manuscript1
+                row__transcription__manuscript=manuscript1,
+                column__in=columns,
             ).values_list("column__id", flat=True)
             if manuscript2:
                 column_ids_for_manuscript2 = Cell.objects.filter(
-                    row__transcription__manuscript=manuscript2
+                    row__transcription__manuscript=manuscript2,
+                    column__in=columns,
                 ).values_list("column__id", flat=True)
             else:  # atext
-                column_ids_for_manuscript2 = Column.objects.exclude(
+                column_ids_for_manuscript2 = columns.exclude(
                     atext=None
                 ).values_list("id", flat=True)
 
             column_ids_intersection = set(column_ids_for_manuscript1) & set(
                 column_ids_for_manuscript2
             )
-            if verses:
-                column_ids_in_verses = set(
-                    Column.objects.filter(alignment__verse__in=verses).values_list(
-                        "id", flat=True
-                    )
-                )
-                column_ids_intersection = column_ids_intersection & column_ids_in_verses
             column_ids_intersection = sorted(column_ids_intersection)
 
             total_count = len(column_ids_intersection)

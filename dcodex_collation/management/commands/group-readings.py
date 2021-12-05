@@ -1,12 +1,12 @@
 import sys
 import csv
 from django.contrib.sites.models import Site
+from django.core.management.base import BaseCommand, CommandError
 
 from dcodex.models import *
 from dcodex_collation.models import *
 
-
-from django.core.management.base import BaseCommand, CommandError
+from ._mixins import VersesCommandMixin
 
 
 def get_equivalent_state_ids(states, transitions_to_process):
@@ -28,29 +28,15 @@ def get_equivalent_state_ids(states, transitions_to_process):
     return equivalent_state_ids
 
 
-class Command(BaseCommand):
+class Command(VersesCommandMixin, BaseCommand):
     help = "Finds readings for a group."
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "family", type=str, help="The siglum for a family of manuscripts."
-        )
-        parser.add_argument(
             "sigla", type=str, nargs="+", help="The sigla for the mss in the group."
         )
-        parser.add_argument(
-            "-s",
-            "--start",
-            type=str,
-            help="The starting verse of the passage selection.",
-        )
-        parser.add_argument(
-            "-e",
-            "--end",
-            type=str,
-            help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.",
-        )
-        parser.add_argument("-f", "--file", type=str, help="An output file.")
+        self.add_verses_parser(parser, family_optional=True, start_optional=True)
+        parser.add_argument("-o", "--output", type=str, help="An output CSV file.")
         parser.add_argument(
             "-i",
             "--ignore",
@@ -60,28 +46,24 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        family = Family.objects.get(name=options["family"])
-        witnesses_in_family = family.manuscripts()
 
         allow_ignore = options["ignore"]
 
         sigla = options["sigla"]
         mss_in_group = [Manuscript.find(siglum) for siglum in sigla]
+        if not mss_in_group:
+            print("No manuscripts found.")
+
         mss_ids_in_group = [ms.id for ms in mss_in_group]
         mss_in_group = Manuscript.objects.filter(id__in=mss_ids_in_group)
 
-        VerseClass = witnesses_in_family.first().verse_class()
-
-        start_verse_string = options["start"] or ""
-        end_verse_string = options["end"] or ""
-
-        verses = VerseClass.queryset_from_strings(start_verse_string, end_verse_string)
+        verse_class = mss_in_group[0].verse_class()
 
         delimiter = "\t"
         csv_writers = [csv.writer(sys.stdout, delimiter=delimiter)]
         file = None
-        if options["file"]:
-            file = open(options["file"], "w", newline="")
+        if options["output"]:
+            file = open(options["output"], "w", newline="")
             csv_writers.append(csv.writer(file, delimiter=delimiter))
 
         for csv_writer in csv_writers:
@@ -113,7 +95,7 @@ class Command(BaseCommand):
                 )
             )
 
-        alignments = Alignment.objects.filter(family=family, verse__in=verses)
+        alignments = self.get_alignments_from_options(options, verse_class=verse_class)
         for alignment in alignments:
             for column in alignment.column_set.all():
                 cells_ingroup = column.cell_set.filter(

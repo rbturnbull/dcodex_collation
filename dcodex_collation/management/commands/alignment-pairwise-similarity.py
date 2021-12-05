@@ -5,9 +5,9 @@ from django.core.management.base import BaseCommand, CommandError
 from dcodex.models import *
 from dcodex_collation.models import *
 import argparse
-
-# import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+
+from ._mixins import VersesCommandMixin
 
 
 def str2bool(v):
@@ -21,7 +21,7 @@ def str2bool(v):
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
 
-class Command(BaseCommand):
+class Command(VersesCommandMixin, BaseCommand):
     help = "Shows a graph of the pairwise similarity of two manuscripts based on the same states in alignments."
 
     def add_arguments(self, parser):
@@ -31,6 +31,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "siglum2", type=str, help="The siglum the second manuscript."
         )
+        self.add_verses_parser(parser, family_optional=True, start_optional=True)
         parser.add_argument(
             "--window", type=int, default=15, help="The window size. Default: 15."
         )
@@ -48,21 +49,15 @@ class Command(BaseCommand):
             default=False,
             help="Forces the code to use all transition types. Default: Ignores transition types registered as TransitionTypeToIgnore.",
         )
-        parser.add_argument(
-            "--start", type=str, help="The starting verse of the passage selection."
-        )
-        parser.add_argument(
-            "--end",
-            type=str,
-            help="The ending verse of the passage selection. If this is not given, then it only uses the start verse.",
-        )
-        parser.add_argument(
-            "--skip", type=str, nargs="+", help="A list of verses to skip."
-        )
-
+        
     def handle(self, *args, **options):
         manuscript1 = Manuscript.find(options["siglum1"])
         manuscript2 = Manuscript.find(options["siglum2"])
+
+        verse_class = manuscript1.verse_class()
+        assert manuscript2.verse_class() == verse_class
+        alignments = self.get_alignments_from_options(options, verse_class=verse_class)
+
         window = options["window"]
         restrict_window_full = options["full"]
 
@@ -77,12 +72,12 @@ class Command(BaseCommand):
         print(f"{manuscript2 =}")
 
         verse_ids_manuscript1 = set(
-            Row.objects.filter(transcription__manuscript=manuscript1).values_list(
+            Row.objects.filter(transcription__manuscript=manuscript1, alignment__in=alignments).values_list(
                 "alignment__verse__id", flat=True
             )
         )
         verse_ids_manuscript2 = set(
-            Row.objects.filter(transcription__manuscript=manuscript2).values_list(
+            Row.objects.filter(transcription__manuscript=manuscript2, alignment__in=alignments).values_list(
                 "alignment__verse__id", flat=True
             )
         )
@@ -91,31 +86,6 @@ class Command(BaseCommand):
 
         intersection_verse_ids = verse_ids_manuscript1 & verse_ids_manuscript2
         print(f"{intersection_verse_ids =}")
-
-        # Use passage selection if given
-        if options["start"]:
-            VerseClass = manuscript1.verse_class()
-            assert manuscript2.verse_class() == VerseClass
-
-            start_verse_string = options["start"] or ""
-            end_verse_string = options["end"] or ""
-
-            selection_verse_ids = set(
-                VerseClass.queryset_from_strings(
-                    start_verse_string, end_verse_string
-                ).values_list("id", flat=True)
-            )
-            intersection_verse_ids = intersection_verse_ids & selection_verse_ids
-
-        # Skip verses if told to
-        if options["skip"]:
-            verse_ids_to_skip = set(
-                [
-                    VerseClass.get_from_string(verse_ref_to_skip).id
-                    for verse_ref_to_skip in options["skip"]
-                ]
-            )
-            intersection_verse_ids = intersection_verse_ids - verse_ids_to_skip
 
         intersection_verse_ids_array = np.array(sorted(intersection_verse_ids))
 

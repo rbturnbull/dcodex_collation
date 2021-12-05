@@ -1,37 +1,23 @@
+from django.core.management.base import BaseCommand, CommandError
+
 from dcodex.models import *
 from dcodex_collation.nexus import write_nexus
 
-from django.core.management.base import BaseCommand, CommandError
+from ._mixins import VersesCommandMixin
 
 
-class Command(BaseCommand):
+class Command(VersesCommandMixin, BaseCommand):
     help = "Creates a NEXUS file from an alignment."
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "family", type=str, help="The siglum for a family of manuscripts."
-        )
-        parser.add_argument(
-            "start", type=str, help="The starting verse of the passage selection."
-        )
-        parser.add_argument(
-            "end",
-            type=str,
-            nargs="?",
-            help="The ending verse of the passage selection. If this is not given, then it only aligns the start verse.",
-        )
-        parser.add_argument(
-            "-f", "--file", type=str, help="The path to the NEXUS file to be outputted."
-        )
+        self.add_verses_parser(parser, family_optional=False, start_optional=True)
+        parser.add_argument("-o", "--output", type=str, help="An output NEXUS file.")
         parser.add_argument(
             "-x",
             "--exclude",
             type=str,
             nargs="+",
             help="A list of witnesses to exclude.",
-        )
-        parser.add_argument(
-            "-k", "--skip", type=str, nargs="+", help="A list of verses to skip."
         )
         parser.add_argument(
             "-w",
@@ -49,22 +35,8 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        family = Family.objects.get(name=options["family"])
+        family, verses = self.get_family_and_verses_from_options(options)
         witnesses_in_family = family.manuscripts()
-
-        VerseClass = witnesses_in_family.first().verse_class()
-
-        start_verse_string = options["start"] or ""
-        end_verse_string = options["end"] or ""
-
-        verses = VerseClass.queryset_from_strings(start_verse_string, end_verse_string)
-
-        if options["skip"]:
-            verse_ids_to_skip = [
-                VerseClass.get_from_string(verse_ref_to_skip).id
-                for verse_ref_to_skip in options["skip"]
-            ]
-            verses = verses.exclude(id__in=verse_ids_to_skip)
 
         # Filter for witnesses that attest verses in this selection
         witness_ids = []
@@ -104,8 +76,8 @@ class Command(BaseCommand):
 
             witnesses = witnesses.exclude(id__in=exclude_ids)
 
-        if options["file"]:
-            with open(options["file"], "w") as file:
+        if options["output"]:
+            with open(options["output"], "w") as file:
                 write_nexus(family, verses, witnesses, file, atext=options["atext"])
         else:
             write_nexus(family, verses, witnesses, atext=options["atext"])
