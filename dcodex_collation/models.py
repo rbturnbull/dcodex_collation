@@ -1459,7 +1459,7 @@ def disagreements_transitions_csv(
         file.close()
 
 
-def calc_pairwise_comparison_array(manuscripts, columns=None, atext: bool = False):
+def calc_pairwise_comparison_array(manuscripts, columns=None, atext: bool = False, raw: bool = True):
     ignore_transition_type_ids = set(
         TransitionTypeToIgnore.objects.all().values_list(
             "transition_type__id", flat=True
@@ -1469,8 +1469,11 @@ def calc_pairwise_comparison_array(manuscripts, columns=None, atext: bool = Fals
         columns = Column.objects.all()
 
     size = len(manuscripts) + int(atext)
-    comparison_array = np.zeros((size, size))
-    np.fill_diagonal(comparison_array, 1.0)
+    if raw:
+        comparison_array = np.full((size, size), '', dtype='U100')
+    else:
+        comparison_array = np.zeros((size, size))
+        np.fill_diagonal(comparison_array, 1.0)
 
     for index1, manuscript1 in enumerate(manuscripts):
         for index2 in range(index1 + 1, size):
@@ -1565,8 +1568,12 @@ def calc_pairwise_comparison_array(manuscripts, columns=None, atext: bool = Fals
                     if transition.transition_type.id in ignore_transition_type_ids:
                         agreement_count += 1
 
-            comparison_array[index1, index2] = comparison_array[index2, index1] = (
-                agreement_count / total_count
-            )
+            if raw:
+                value = f"{agreement_count} of {total_count}"                
+            else:
+                value = agreement_count / total_count
+
+            comparison_array[index1, index2] = value
+            comparison_array[index2, index1] = value
 
     return comparison_array

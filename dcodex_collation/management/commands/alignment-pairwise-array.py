@@ -30,6 +30,12 @@ class Command(VersesCommandMixin, BaseCommand):
             default=False,
             help="Includes the A-Text in the output.",
         )
+        parser.add_argument(
+            "--raw",
+            action="store_true",
+            default=False,
+            help="Returns the raw number of agreements with the total number of columns.",
+        )
 
     def handle(self, *args, **options):
         manuscripts = [Manuscript.find(siglum) for siglum in options["sigla"]]
@@ -39,14 +45,16 @@ class Command(VersesCommandMixin, BaseCommand):
         columns = self.get_columns_from_options(options, verse_class)
 
         atext = options["atext"]
+        raw = options['raw']
         comparison_array = calc_pairwise_comparison_array(
-            manuscripts, columns=columns, atext=atext
+            manuscripts, columns=columns, atext=atext, raw=raw,
         )
         if atext:
             sigla += ["A-Text"]
 
         # Make a percentage
-        comparison_array *= 100.0
+        if not raw:
+            comparison_array *= 100.0
         df = pd.DataFrame(data=comparison_array, columns=sigla)
         df["MSS"] = sigla
         df = df.set_index("MSS")
