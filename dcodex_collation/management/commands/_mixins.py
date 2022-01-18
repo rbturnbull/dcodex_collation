@@ -23,6 +23,11 @@ class VersesCommandMixin():
             "--skip", 
             type=str, nargs="+", help="A list of verses to skip."
         )
+        parser.add_argument(
+            '-vv',
+            "--verses", 
+            type=str, nargs="+", help="A list of verses to include."
+        )
 
     def get_family_from_options(self, options):
         if ('family' in options) and options["family"]:
@@ -50,6 +55,14 @@ class VersesCommandMixin():
                 ]
             )
             verses = verses.exclude(id__in=verse_ids_to_skip)
+
+        if options["verses"]:
+            verse_ids_to_add = [verse_class.get_from_string(verse_ref).id for verse_ref in options["verses"]]
+            verses_to_add = verse_class.objects.filter(id__in=verse_ids_to_add)
+            if options["start"]:
+                verses = verses | verses_to_add
+            else:
+                verses = verses_to_add
 
         return verses
 
