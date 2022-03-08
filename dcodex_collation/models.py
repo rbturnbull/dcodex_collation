@@ -495,6 +495,9 @@ class Alignment(models.Model):
         for column in self.column_set.all():
             column.delete_invalid_transitions()
 
+    def untranscribed_manuscripts(self):
+        return self.family.untranscribed_manuscripts_at(self.verse)
+
     def ascii(self):
         string = ""
 

@@ -53,14 +53,14 @@
             {% endfor %}
         </tbody>
     </table>
+    <h2>Untranscribed Manuscripts</h2>
+    {% for manuscript in column.alignment.untranscribed_manuscripts %}
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=column.alignment.verse.url_ref %}">{{manuscript.short_name}}</a>
+    {% endfor %}
 
-    <h3>A Text Notes</h3>
+    <h2>A Text Notes</h2>
     <p id="atext-notes">{{column.atext_notes|blank_if_none}}</p>
     <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#atext-notes-modal" >Edit</button>
-
-
-
-    
 
     <h2>State Pairs</h2>
     <table class="table">
