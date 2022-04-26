@@ -16,10 +16,12 @@ class ComparisonTableForm(forms.Form):
 
     def comparison_table(self):
         manuscripts = self.cleaned_data["manuscripts"]
-        sigla = [ms.siglum for ms in manuscripts] + ["A-Text"]
+        sigla = [ms.siglum for ms in manuscripts]
+        if self.cleaned_data["atext"]:
+            sigla += ["A-Text"]
 
         comparison_array = calc_pairwise_comparison_array(
-            manuscripts, atext=self.cleaned_data["atext"]
+            manuscripts, atext=self.cleaned_data["atext"], raw=False,
         )
 
         return sigla, comparison_array

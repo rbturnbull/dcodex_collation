@@ -65,6 +65,7 @@ def update_alignment(alignment, **kwargs):
         update_transcription_in_alignment(transcription, alignment=alignment, **kwargs)
 
     # TODO Remove rows for deleted transcriptions
+    alignment.clear_empty()
 
 
 def update_transcription_in_alignment(
@@ -476,6 +477,7 @@ def align_family_at_verse(
 
     # dn = hierarchy.dendrogram(linkage, orientation='right',labels=[transcription.manuscript.siglum for transcription in transcriptions])
     # plt.show()
+    alignment.clear_empty()
     return alignment
 
 

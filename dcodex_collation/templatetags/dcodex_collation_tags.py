@@ -32,7 +32,8 @@ def array_2d_value(array, x, y):
 
 @register.simple_tag
 def array_2d_value_percent(array, x, y):
-    return "%.2f%%" % (array[x, y] * 100.0)
+    value = array[x, y]
+    return value if isinstance(value, str) else "%.2f%%" % (value * 100.0)
 
 
 @register.simple_tag
