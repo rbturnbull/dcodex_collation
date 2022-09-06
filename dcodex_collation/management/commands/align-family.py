@@ -10,7 +10,7 @@ class Command(VersesCommandMixin, BaseCommand):
     help = 'Aligns all witnesses in a range of verses.'
 
     def add_arguments(self, parser):
-        self.add_verses_parser(parser)
+        self.add_verses_parser(parser, start_optional=True)
         parser.add_argument('--replace', type=strtobool, nargs='?', const=True, default=False, help="If true, this replaces any alignment if it exists. (Default false)")
 
     def handle(self, *args, **options):
