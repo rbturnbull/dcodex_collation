@@ -61,13 +61,21 @@ th {
 {% endblock %}
 
 {% block middle %}
-{{ alignment.family }}: {{alignment.verse}}
-
-{% if prev_verse %}
-    <a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=prev_verse.url_ref %}" class="btn btn-outline-primary">Prev</a>
+<center>
+<h2>Family: {{ alignment.family }}. Verse: {{ alignment.verse }}</h2>
+</center>
+{% if alignment.prev_in_order %}
+    <a href="{{ alignment.prev_in_order.get_absolute_url }}"  class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ alignment.prev_in_order }}">
+        <i class="fas fa-arrow-left"></i>
+    </a>
 {% endif %}
-{% if next_verse %}
-    <a href="{% url 'alignment_for_family' family_siglum=alignment.family.name verse_ref=next_verse.url_ref %}" class="btn btn-outline-primary">Next</a>
+    <a href="{% url 'alignment_states' family_siglum=alignment.family.name verse_ref=alignment.verse.url_ref %}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ alignment }} States">
+        <i class="fa fa-list"></i>
+    </a>
+{% if alignment.next_in_order %}
+    <a href="{{ alignment.next_in_order.get_absolute_url }}"  class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ alignment.next_in_order }}">
+        <i class="fas fa-arrow-right"></i>
+    </a>
 {% endif %}
 
 <div class="container">

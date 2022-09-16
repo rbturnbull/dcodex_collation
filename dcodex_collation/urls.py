@@ -15,6 +15,11 @@ urlpatterns = [
         name="alignment_for_family",
     ),
     path(
+        "states/<str:family_siglum>/<str:verse_ref>/",
+        views.AlignmentStatesForFamily.as_view(),
+        name="alignment_states",
+    ),
+    path(
         "alignment/<str:family_siglum>/<str:verse_ref>/<int:column_rank>/",
         views.ColumnDetailView.as_view(),
         name="column_detail",

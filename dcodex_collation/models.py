@@ -481,7 +481,7 @@ def align_family_at_verse(
     return alignment
 
 
-class Alignment(models.Model):
+class Alignment(NextPrevMixin, models.Model):
     family = models.ForeignKey(
         Family, on_delete=models.SET_DEFAULT, default=None, null=True, blank=True
     )

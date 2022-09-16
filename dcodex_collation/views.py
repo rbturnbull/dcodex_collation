@@ -69,6 +69,10 @@ class AlignmentForFamily(LoginRequiredMixin, TemplateView):
         return context
 
 
+class AlignmentStatesForFamily(AlignmentForFamily):
+    template_name = "dcodex_collation/alignment_states.html"
+
+
 @login_required
 def clear_empty(request):
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
