@@ -38,15 +38,10 @@
         {% if cell.column.states.count > 1 %}
             <li>
             
-            <b>{% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}</b>
-
-            {% for agreement_cell in cell.agreement_cells %}
-                <a href="{% url 'dcodex-manuscript-verse' request_siglum=agreement_cell.row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{agreement_cell.row.transcription.manuscript.short_name}}</a>
-            {% endfor %}
-            <br>
+            <b>{% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}]</b>
             {% for state in cell.column.states %}
                 {% if state != cell.state %}
-                    <b>{% if state.text %}{{ state }}{% else %}OMIT{% endif %}</b> {% sigla_with_state column=cell.column state=state %}
+                    {% if state.text %}{{ state }}{% else %}OMIT{% endif %} {% sigla_with_state column=cell.column state=state %}{% if forloop.last %}.{%else%}.{%endif%}
                 {% endif %}
             {% endfor %}
             </li>
@@ -54,6 +49,10 @@
     {% endfor %}
     </ul>
     </p>
+    <h2>Manuscripts</h2>
+    {% for row in alignment.row_set.all %}
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{row.transcription.manuscript.short_name}}</a>
+    {% endfor %}
 
     <h2>Untranscribed Manuscripts</h2>
     {% for manuscript in alignment.untranscribed_manuscripts %}
