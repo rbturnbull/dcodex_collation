@@ -66,3 +66,13 @@ def column_pair_row(column, pair, pair_rank):
         "pair_rank": pair_rank,
         "column": column,
     }
+
+
+@register.inclusion_tag("dcodex_collation/partials/_sigla_with_state.html")
+def sigla_with_state(column, state):
+    cells = column.cells_with_state(state)
+
+    return {
+        "cells": cells,
+        "alignment": column.alignment,
+    }

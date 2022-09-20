@@ -1121,6 +1121,10 @@ class Cell(models.Model):
             return str(self.token)
         return ""
 
+    def agreement_cells(self):
+        """ Cells which agree with this cell at this column in the alignment. """
+        return self.column.cells_with_state(self.state)
+
 
 class TransitionType(models.Model):
     name = models.CharField(max_length=255)

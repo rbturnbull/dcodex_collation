@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load dcodex_tags %}
+{% load dcodex_collation_tags %}
+{% block title %}{{ alignment.family }}: {{alignment.verse}}{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if alignment.prev_in_order %}
+    <a href="{% url 'apparatus' family_siglum=alignment.prev_in_order.family.name verse_ref=alignment.prev_in_order.verse.url_ref %}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ alignment.prev_in_order }}">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+    {% endif %}
+    <a href="{{ alignment.get_absolute_url }}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ alignment }} Table">
+        <i class="fa fa-table"></i>
+    </a>
+    {% if alignment.next_in_order %}
+        <a href="{% url 'apparatus' family_siglum=alignment.next_in_order.family.name verse_ref=alignment.next_in_order.verse.url_ref %}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ alignment.next_in_order }}">
+            <i class="fas fa-arrow-right"></i>
+        </a>
+    {% endif %}
+
+    <table class="table">
+        <tbody>
+            <tr><td>Family</td><td>{{ alignment.family }}</td></tr>
+            <tr><td>Verse</td><td><a href='{{ alignment.get_absolute_url }}'>{{ alignment.verse }}</a></td></tr>
+        </tbody>
+    </table>
+    
+    <h2>Apparatus</h2>
+    <p style='font-size: 1.5em;'>
+    {% for cell in base_row.cell_set.all %}
+        {% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}
+    {% endfor %}
+    </p>
+    <p>
+    <ul>
+    {% for cell in base_row.cell_set.all %}
+        {% if cell.column.states.count > 1 %}
+            <li>
+            
+            <b>{% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}</b>
+
+            {% for agreement_cell in cell.agreement_cells %}
+                <a href="{% url 'dcodex-manuscript-verse' request_siglum=agreement_cell.row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{agreement_cell.row.transcription.manuscript.short_name}}</a>
+            {% endfor %}
+            <br>
+            {% for state in cell.column.states %}
+                {% if state != cell.state %}
+                    <b>{% if state.text %}{{ state }}{% else %}OMIT{% endif %}</b> {% sigla_with_state column=cell.column state=state %}
+                {% endif %}
+            {% endfor %}
+            </li>
+        {% endif %}
+    {% endfor %}
+    </ul>
+    </p>
+
+    <h2>Untranscribed Manuscripts</h2>
+    {% for manuscript in alignment.untranscribed_manuscripts %}
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=alignment.verse.url_ref %}">{{manuscript.short_name}}</a>
+    {% endfor %}
+
+</div>
+
+
+
+{% endblock content %}
+
+

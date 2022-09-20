@@ -1,0 +1,3 @@
+{% for cell in cells %}
+    <a href="{% url 'dcodex-manuscript-verse' request_siglum=cell.row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{cell.row.transcription.manuscript.short_name}}</a>
+{% endfor %}

@@ -73,6 +73,18 @@ class AlignmentStatesForFamily(AlignmentForFamily):
     template_name = "dcodex_collation/alignment_states.html"
 
 
+class ApparatusForFamily(AlignmentForFamily):
+    template_name = "dcodex_collation/apparatus.html"
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
+
+        context["base_row"] = context["alignment"].row_set.first()
+
+        return context        
+
+
 @login_required
 def clear_empty(request):
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))

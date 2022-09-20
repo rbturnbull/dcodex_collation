@@ -20,6 +20,11 @@ urlpatterns = [
         name="alignment_states",
     ),
     path(
+        "apparatus/<str:family_siglum>/<str:verse_ref>/",
+        views.ApparatusForFamily.as_view(),
+        name="apparatus",
+    ),
+    path(
         "alignment/<str:family_siglum>/<str:verse_ref>/<int:column_rank>/",
         views.ColumnDetailView.as_view(),
         name="column_detail",
