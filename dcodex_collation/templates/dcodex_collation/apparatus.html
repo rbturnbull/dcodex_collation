@@ -27,7 +27,7 @@
     </table>
     
     <h2>Apparatus</h2>
-    <p style='font-size: 1.5em;'>
+    <p style='font-size: 1.5em;'>{{ alignment.verse }}
     {% for cell in base_row.cell_set.all %}
         {% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}
     {% endfor %}
@@ -49,15 +49,17 @@
     {% endfor %}
     </ul>
     </p>
-    <h2>Manuscripts</h2>
+    <p><b>Witnesses:</b> 
     {% for row in alignment.row_set.all %}
-        <a href="{% url 'dcodex-manuscript-verse' request_siglum=row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{row.transcription.manuscript.short_name}}</a>
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{row.transcription.manuscript.short_name}}</a>{% if forloop.last %}.{%else%},{%endif%}
     {% endfor %}
+    </p>
 
-    <h2>Untranscribed Manuscripts</h2>
+    <p><b>Missing:</b>    
     {% for manuscript in alignment.untranscribed_manuscripts %}
-        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=alignment.verse.url_ref %}">{{manuscript.short_name}}</a>
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=alignment.verse.url_ref %}">{{manuscript.short_name}}</a>{% if forloop.last %}.{%else%},{%endif%}
     {% endfor %}
+    </p>
 
 </div>
 
