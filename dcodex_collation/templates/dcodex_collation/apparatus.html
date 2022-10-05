@@ -40,7 +40,7 @@
             
             <b>{% if atext_column_data.state.text %}{{ atext_column_data.state }}{% else %}⸆{% endif %}]</b>
             {% for state in atext_column_data.alternatives %}
-                {% if state.text %}{{ state }}{% else %}OMIT{% endif %} {% sigla_with_state column=atext_column_data.column state=state %}{% if forloop.last %}.{%else%} | {%endif%}
+                {% if state.text %}{{ state }}{% else %}OMIT{% endif %} {% sigla_with_state column=atext_column_data.column state=state %}{% if forloop.last %}.{%else%}; {%endif%}
             {% endfor %}
             </li>
         {% endif %}
@@ -49,13 +49,13 @@
     </p>
     <p><b>Witnesses:</b> 
     {% for row in alignment.row_set.all %}
-        <a href="{% url 'dcodex-manuscript-verse' request_siglum=row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{row.transcription.manuscript.short_name}}</a>{% if forloop.last %}.{%else%},{%endif%}
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{row.transcription.manuscript.short_name}}</a>{% if forloop.last %}.{%else%}{%endif%}
     {% endfor %}
     </p>
 
     <p><b>Missing:</b>    
     {% for manuscript in alignment.untranscribed_manuscripts %}
-        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=alignment.verse.url_ref %}">{{manuscript.short_name}}</a>{% if forloop.last %}.{%else%},{%endif%}
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=alignment.verse.url_ref %}">{{manuscript.short_name}}</a>{% if forloop.last %}.{%else%}{%endif%}
     {% endfor %}
     </p>
 
