@@ -1,1 +1,1 @@
-{% for cell in cells %}{%if not forloop.first %} {%endif%}<a href="{% url 'dcodex-manuscript-verse' request_siglum=cell.row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{cell.row.transcription.manuscript.short_name}}</a>{% endfor %}
+{% for cell in cells %}{%if not forloop.first %} {%endif%}<a href="{% url 'dcodex-manuscript-verse' request_siglum=cell.row.transcription.manuscript.siglum request_verse=alignment.verse.url_ref %}">{{cell.row.transcription.manuscript.short_name}}</a>{%if not forloop.last %},{%endif%}{% endfor %}
