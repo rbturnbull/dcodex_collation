@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load dcodex_tags %}
 {% load dcodex_collation_tags %}
-{% block title %}{{ alignment.family }}: {{alignment.verse}}{% endblock %}
+{% block title %}Apparatus {{alignment.verse}} ({{ alignment.family }}){% endblock %}
 
 {% block content %}
 <div class="container">
@@ -29,7 +29,7 @@
     <h2>Apparatus</h2>
     <p style='font-size: 1.5em;'>{{ alignment.verse }}
     {% for atext_column_data in atext_data %}
-        <span style='color: {% if atext_column_data.is_majority %}grey{%else%}black{%endif%}'>{% if atext_column_data.state.text %}{{ atext_column_data.state }}{% else %}⸆{% endif %}
+        <a href='{{ atext_column_data.column.get_absolute_url }}'><span style='color: {% if atext_column_data.is_majority %}grey{%else%}black{%endif%}'>{% if atext_column_data.state.text %}{{ atext_column_data.state }}{% else %}⸆{% endif %}</a>
     {% endfor %}
     </p>
     <p>
