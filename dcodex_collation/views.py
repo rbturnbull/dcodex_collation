@@ -82,6 +82,20 @@ class ApparatusForFamily(AlignmentForFamily):
 
         context["base_row"] = context["alignment"].row_set.first()
 
+        atext_data = []
+
+        for column in context["alignment"].column_set.all():
+            states = column.states(allow_ignore=True)
+            atext_state = column.atext if column.atext != None else column.majority_state()
+            atext_data.append( dict(
+                state = atext_state,
+                is_majority = (column.atext == None and states.count() > 1),
+                column = column,
+                alternatives = [state for state in states if state != atext_state],
+            ))
+
+        context["atext_data"] = atext_data
+
         return context        
 
 

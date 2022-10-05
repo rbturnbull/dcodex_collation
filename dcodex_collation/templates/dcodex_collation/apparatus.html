@@ -28,21 +28,19 @@
     
     <h2>Apparatus</h2>
     <p style='font-size: 1.5em;'>{{ alignment.verse }}
-    {% for cell in base_row.cell_set.all %}
-        {% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}
+    {% for atext_column_data in atext_data %}
+        <span style='color: {% if atext_column_data.is_majority %}grey{%else%}black{%endif%}'>{% if atext_column_data.state.text %}{{ atext_column_data.state }}{% else %}⸆{% endif %}
     {% endfor %}
     </p>
     <p>
     <ul>
-    {% for cell in base_row.cell_set.all %}
-        {% if cell.column.states.count > 1 %}
+    {% for atext_column_data in atext_data %}
+        {% if atext_column_data.alternatives %}
             <li>
             
-            <b>{% if cell.state.text %}{{ cell.state }}{% else %}⸆{% endif %}]</b>
-            {% for state in cell.column.states %}
-                {% if state != cell.state %}
-                    {% if state.text %}{{ state }}{% else %}OMIT{% endif %} {% sigla_with_state column=cell.column state=state %}{% if forloop.last %}.{%else%}.{%endif%}
-                {% endif %}
+            <b>{% if atext_column_data.state.text %}{{ atext_column_data.state }}{% else %}⸆{% endif %}]</b>
+            {% for state in atext_column_data.alternatives %}
+                {% if state.text %}{{ state }}{% else %}OMIT{% endif %} {% sigla_with_state column=atext_column_data.column state=state %}{% if forloop.last %}.{%else%} | {%endif%}
             {% endfor %}
             </li>
         {% endif %}

@@ -892,6 +892,16 @@ class Column(NextPrevMixin, models.Model):
             end_state__id__in=states
         )
 
+    def majority_state(self):
+        majority_state = None
+        majority_count = 0
+        for state in self.states():
+            count = state.cells_at(self).count()
+            if count > majority_count:
+                majority_count = count
+                majority_state = state
+        return majority_state
+
     def delete_invalid_transitions(self):
         """Removes transitions where the state is no longer in one of the states for the cell."""
         invalid_transitions = self.invalid_transitions()
