@@ -87,11 +87,13 @@ class ApparatusForFamily(AlignmentForFamily):
         for column in context["alignment"].column_set.all():
             states = column.states(allow_ignore=True)
             atext_state = column.atext if column.atext != None else column.majority_state()
+            atext_state_equivalent = column.get_equivalent_state(atext_state)
             atext_data.append( dict(
                 state = atext_state,
                 is_majority = (column.atext == None and states.count() > 1),
                 column = column,
-                alternatives = [state for state in states if state != atext_state],
+                alternatives = [state for state in states if state != atext_state_equivalent],
+                states = states,
             ))
 
         context["atext_data"] = atext_data
