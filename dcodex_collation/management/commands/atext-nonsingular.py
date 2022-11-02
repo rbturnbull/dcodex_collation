@@ -43,5 +43,5 @@ class Command(VersesCommandMixin, BaseCommand):
                 
             column.atext_notes = f"Setting A-Text automatically because '{other.str_at(column)}' is a singular reading."
             print(column, "A-Text:", column.atext, "-", column.atext_notes)
-
+            column.save()
 
