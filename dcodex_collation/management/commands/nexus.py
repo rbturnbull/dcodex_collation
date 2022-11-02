@@ -33,9 +33,17 @@ class Command(VersesCommandMixin, BaseCommand):
             default=False,
             help="Includes the A-Text as a witness. Default False.",
         )
+        parser.add_argument(
+            "--no-charstatelabels",
+            action="store_true",
+            default=False,
+            help="Does not include CHARSTATELABELS in the Nexus output. Default False.",
+        )
+        
 
     def handle(self, *args, **options):
         family, verses = self.get_family_and_verses_from_options(options)
+        charstatelabels = not options["no_charstatelabels"]
         witnesses_in_family = family.manuscripts()
 
         # Filter for witnesses that attest verses in this selection
@@ -78,6 +86,6 @@ class Command(VersesCommandMixin, BaseCommand):
 
         if options["output"]:
             with open(options["output"], "w") as file:
-                write_nexus(family, verses, witnesses, file, atext=options["atext"])
+                write_nexus(family, verses, witnesses, file, atext=options["atext"], charstatelabels=charstatelabels)
         else:
-            write_nexus(family, verses, witnesses, atext=options["atext"])
+            write_nexus(family, verses, witnesses, atext=options["atext"], charstatelabels=charstatelabels)

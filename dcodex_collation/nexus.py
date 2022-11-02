@@ -3,7 +3,13 @@ from .models import *
 
 
 def write_nexus(
-    family, verses, witnesses=None, file=None, allow_ignore=True, atext=False
+    family, 
+    verses, 
+    witnesses=None, 
+    file=None, 
+    allow_ignore=True, 
+    atext=False,
+    charstatelabels=True,
 ):
     file = file or sys.stdout
     witnesses = witnesses or family.manuscripts()
@@ -37,23 +43,24 @@ def write_nexus(
         file.write("%s" % symbols[x])
     file.write('";\n')
 
-    file.write("\tCHARSTATELABELS\n")
-    index = 0
-    for verse in verses:
-        alignment = Alignment.objects.filter(family=family, verse=verse).first()
-        if not alignment:
-            continue
-        for column in alignment.column_set.all():
-            if column.only_punctuation():
+    if charstatelabels:
+        file.write("\tCHARSTATELABELS\n")
+        index = 0
+        for verse in verses:
+            alignment = Alignment.objects.filter(family=family, verse=verse).first()
+            if not alignment:
                 continue
+            for column in alignment.column_set.all():
+                if column.only_punctuation():
+                    continue
 
-            state_count = column.state_count(allow_ignore)
-            labels = ["State%d" % int(state) for state in range(state_count)]
-            labels_joined = ". ".join(labels)
-            column_name = f"{column.alignment.verse.url_ref()}:{column.order}"
-            file.write(f"\t\t{index+1}  Column-{column_name} / {labels_joined}, \n")
-            index += 1
-    file.write("\t;\n")
+                state_count = column.state_count(allow_ignore)
+                labels = ["State%d" % int(state) for state in range(state_count)]
+                labels_joined = ". ".join(labels)
+                column_name = f"{column.alignment.verse.url_ref()}:{column.order}"
+                file.write(f"\t\t{index+1}  Column-{column_name} / {labels_joined}, \n")
+                index += 1
+        file.write("\t;\n")
 
     # Work out the longest length of a siglum for a witness to format the matrix
     max_siglum_length = 0
