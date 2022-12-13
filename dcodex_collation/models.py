@@ -60,6 +60,7 @@ def update_alignment(alignment, **kwargs):
     new_transcriptions = family_transcriptions.exclude(
         manuscript__id__in=mss_ids_in_alignment
     )
+
     for transcription in new_transcriptions:
         print(f"Adding {transcription.manuscript.siglum} to alignment.")
         update_transcription_in_alignment(transcription, alignment=alignment, **kwargs)
@@ -901,6 +902,31 @@ class Column(NextPrevMixin, models.Model):
                 majority_count = count
                 majority_state = state
         return majority_state
+
+    def entropy(self, base:float=None, allow_ignore:bool=False) -> float:
+        """Calculates the empirical entropy at this column.
+
+        i.e. the average information content or `surprise' for all states
+
+        Args:
+            base (float, optional): The base for the logarithm. If None then it uses base 2 (i.e. gives a result in bits). Defaults to None.
+            allow_ignore (bool, optional): Whether or not to ignore transition states if specified.. Defaults to False.
+
+        Returns:
+            float: The empirical entropy for this column.
+        """
+        H = 0.0
+
+        row_count = self.alignment.row_set.count()
+        for state in self.states(allow_ignore=allow_ignore):
+            state_count = state.cells_at(self).count()
+            p_hat = state_count/row_count
+            H -= p_hat * np.log2(p_hat)
+
+        if base is not None:
+            H /= np.log2(base)
+
+        return H
 
     def delete_invalid_transitions(self):
         """Removes transitions where the state is no longer in one of the states for the cell."""
