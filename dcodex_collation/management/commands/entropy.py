@@ -21,6 +21,13 @@ class Command(VersesCommandMixin, BaseCommand):
             help="Whether it should ignore transisions in the TransitionsToIgnore group.",
         )
         parser.add_argument(
+            "-a",
+            "--all",
+            action="store_true",
+            default=False,
+            help="Whether it should only output results for all columns instead of just columns with multiple states.",
+        )
+        parser.add_argument(
             "--base", 
             type=float, 
             help="The base to use for the logarithm.",
@@ -30,10 +37,13 @@ class Command(VersesCommandMixin, BaseCommand):
     def handle(self, *args, **options):
         allow_ignore = options["ignore"]
         base = options["base"]
+        all = options["all"]
 
         columns = self.get_columns_from_options(options).filter(atext=None)
-        print("verse", "column", "entropy", sep=",")
-        for column in columns:
-            print(column.alignment.verse, column.order, column.entropy(base=base, allow_ignore=allow_ignore), sep=",")
+        print("index", "verse", "column", "entropy", sep=",")
+        for index, column in enumerate(columns):
+            entropy = column.entropy(base=base, allow_ignore=allow_ignore)
+            if all or entropy > 0.0:
+                print(index, column.alignment.verse, column.order, entropy, sep=",")
 
 
