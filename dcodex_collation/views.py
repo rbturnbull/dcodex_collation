@@ -109,6 +109,14 @@ def clear_empty(request):
 
 
 @login_required
+def realign(request):
+    alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))
+    gotoh_param = [6.6995597099885345, -0.9209875054657459, -5.097397327423096, -1.3005714416503906]        
+    update_alignment(alignment, gotoh_param=gotoh_param)    
+    return HttpResponse("OK")
+
+
+@login_required
 def shift(request):
 
     alignment = get_object_or_404(Alignment, id=request.POST.get("alignment"))

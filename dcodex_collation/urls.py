@@ -36,6 +36,7 @@ urlpatterns = [
     ),
     path("shift/", views.shift, name="shift"),
     path("clear_empty/", views.clear_empty, name="clear_empty"),
+    path("realign/", views.realign, name="realign"),
     path("shift_to/", views.shift_to, name="shift_to"),
     path("set_transition_type/", views.set_transition_type, name="set_transition_type"),
     path("set_atext/", views.set_atext, name="set_atext"),

@@ -83,6 +83,7 @@ th {
         {% include 'dcodex_collation/partials/_alignment_table.html' with alignment=alignment %}
     {% endblock alignmenttable %}
     <button class="btn btn-outline-danger clearempty" type="button" >Clear Empty Columns</button>
+    <button class="btn btn-outline-danger realign" type="button" >Re-align</button>
 </div>
 
 {% endblock %}
@@ -224,6 +225,21 @@ $( document ).ready(function() {
         $.ajax({
             type: "POST",
             url: "{% url 'clear_empty' %}",
+            data: data,
+            success: function() {   
+                location.reload();  
+            }
+        });
+        return true;
+    });
+
+    $(".realign").click(function(e){
+        var data = {
+            'alignment': '{{ alignment.id }}', 
+            }
+        $.ajax({
+            type: "POST",
+            url: "{% url 'realign' %}",
             data: data,
             success: function() {   
                 location.reload();  
