@@ -33,17 +33,35 @@ class Command(VersesCommandMixin, BaseCommand):
             help="The base to use for the logarithm.",
             default=None,
         )
+        parser.add_argument(
+            "--states",
+            action="store_true",
+            default=False,
+            help="Whether it should only output results for all columns instead of just columns with multiple states.",
+        )
 
     def handle(self, *args, **options):
         allow_ignore = options["ignore"]
         base = options["base"]
+        output_states = options["states"]
         all = options["all"]
 
         columns = self.get_columns_from_options(options).filter(atext=None)
-        print("index", "verse", "column", "entropy", sep=",")
+        print("index", "verse", "column", "states", "entropy", sep=",")
         for index, column in enumerate(columns):
-            entropy = column.entropy(base=base, allow_ignore=allow_ignore)
-            if all or entropy > 0.0:
-                print(index, column.alignment.verse, column.order, entropy, sep=",")
+            states = column.states(allow_ignore=allow_ignore)
+            states_count = states.count()
+            
+            if all or states_count > 1:
+                entropy = column.entropy(base=base, allow_ignore=allow_ignore)
+                output = [index, column.alignment.verse, column.order, states_count, entropy]
+                if output_states:
+                    for state in states:
+                        cells = state.cells_at(column)
+                        sigla = [cell.row.transcription.manuscript.siglum for cell in cells]
+                        sigla = " ".join(sigla)
+                        state_text = state.str_at(column)
+                        output.append(f"{state_text}: {sigla}")
+                print(*output, sep=",")
 
 
