@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from dcodex.models import *
 from dcodex_collation.models import *
+from django.contrib.sites.models import Site
 
 from django.db.models import F
 from django.db.models import Count, Sum
@@ -45,16 +46,28 @@ class Command(VersesCommandMixin, BaseCommand):
         base = options["base"]
         output_states = options["states"]
         all = options["all"]
+        site = Site.objects.get_current()
+        domain_name = site.domain
+
 
         columns = self.get_columns_from_options(options).filter(atext=None)
-        print("index", "verse", "column", "states", "entropy", sep=",")
+        print("index", "verse", "column", "states", "entropy", "url", sep=",")
         for index, column in enumerate(columns):
             states = column.states(allow_ignore=allow_ignore)
             states_count = states.count()
+            url = reverse(
+                "column_detail",
+                kwargs=dict(
+                    family_siglum=str(column.alignment.family),
+                    verse_ref=column.alignment.verse.url_ref(),
+                    column_rank=column.order,
+                ),
+            )
+
             
             if all or states_count > 1:
                 entropy = column.entropy(base=base, allow_ignore=allow_ignore)
-                output = [index, column.alignment.verse, column.order, states_count, entropy]
+                output = [index, column.alignment.verse, column.order, states_count, entropy, f"http://{domain_name}{url}"]
                 if output_states:
                     for state in states:
                         cells = state.cells_at(column)

@@ -10,6 +10,11 @@ def rows_with_state(column, state):
 
 
 @register.filter
+def state_count_at(state, column):
+    return state.cells_at(column).count()
+
+
+@register.filter
 def token(row, column):
     return row.text_at(column)
 

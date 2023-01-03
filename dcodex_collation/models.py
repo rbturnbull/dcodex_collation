@@ -903,7 +903,7 @@ class Column(NextPrevMixin, models.Model):
                 majority_state = state
         return majority_state
 
-    def entropy(self, base:float=None, allow_ignore:bool=False) -> float:
+    def entropy(self, base:float=None, allow_ignore:bool=True) -> float:
         """Calculates the empirical entropy at this column.
 
         i.e. the average information content or `surprise' for all states

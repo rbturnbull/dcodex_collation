@@ -22,6 +22,7 @@
             <tr><td>Family</td><td>{{ column.alignment.family }}</td></tr>
             <tr><td>Verse</td><td><a href='{{ column.alignment.get_absolute_url }}'>{{ column.alignment.verse }}</a></td></tr>
             <tr><td>Rank</td><td>{{ column.order }}</td></tr>
+            <tr><td>Entropy</td><td>{{ column.entropy|floatformat:"2" }}</td></tr>
         </tbody>
     </table>
     
@@ -32,11 +33,11 @@
                 <th scope="col">Text</th>
                 <th scope="col">A Text</th>
                 <th scope="col">Manuscripts</th>
+                <th scope="col">Count</th>
             </tr>
         </thead>
         <tbody>
             {% for state in column.states %}
-
                 <tr>
                     <td>{{ state }}</td>
                     <td>
@@ -48,6 +49,9 @@
                         {% for row in column|rows_with_state:state %}
                             <a href='{{ row.transcription.get_absolute_url }}'>{{row.transcription.manuscript.short_name}}</a>                            
                         {% endfor %}
+                    </td>
+                    <td>
+                        {{ state|state_count_at:column }}
                     </td>
                 </tr>
             {% endfor %}
