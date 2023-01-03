@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dcodex_collation"
-version = "1.0.11"
+version = "1.0.12"
 description = "An extension for dcodex to collate transcriptions"
 authors = ["Robert Turnbull <robert.turnbull@unimelb.edu.au>"]
 license = "Apache-2.0"
