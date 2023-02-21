@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load dcodex_tags %}
+{% load dcodex_collation_tags %}
+{% block title %}{{ transitiontype }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    {% if start_column.prev_in_order %}
+        <a href="{{ start_column.prev_in_order.get_absolute_url }}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ start_column.prev_in_order }}">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+    {% endif %}
+    {% if end_column.next_in_order %}
+        <a href="{{ end_column.next_in_order.get_absolute_url }}" class="btn btn-outline-primary btn-sm chk-saved" data-toggle="tooltip" data-placement="bottom" title="{{ end_column.next_in_order }}">
+            <i class="fas fa-arrow-right"></i>
+        </a>
+    {% endif %}
+
+    <table class="table">
+        <tbody>
+            <tr><td>Family</td><td>{{ family }}</td></tr>
+            <tr><td>Verse</td><td><a href='{{ alignment.get_absolute_url }}'>{{ alignment.verse }}</a></td></tr>
+            <tr><td>Ranks</td><td>{{ start_column.order }}–{{ end_column.order }}</td></tr>
+            <!--
+            <tr><td>Entropy</td><td>{{ entropy|floatformat:"2" }}</td></tr>
+            -->
+        </tbody>
+    </table>
+    
+    <h2>States</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Text</th>
+                <!--
+                <th scope="col">A Text</th>
+                -->
+                <th scope="col">Manuscripts</th>
+                <th scope="col">Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for multistate in multistates %}
+                <tr>
+                    <td>{{multistate}}</td>
+                    <!--
+                    <td>
+                        <button class="btn atext {% if multistate.is_atext %}btn-danger{% else %}btn-outline-danger{%endif%}" data-state="{{ state.id }}" type="button"  data-target="#atext-notes-{{state.id}}">
+                            A Text
+                        </button>
+                    </td>
+                    -->
+                    <td>
+                        {% for transcription in multistate.transcriptions %}
+                            <a href='{{ transcription.get_absolute_url }}'>{{transcription.manuscript.short_name}}</a>                            
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {{ multistate.manuscript_count }}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h2>Untranscribed Manuscripts</h2>
+    {% for manuscript in alignment.untranscribed_manuscripts %}
+        <a href="{% url 'dcodex-manuscript-verse' request_siglum=manuscript.siglum request_verse=alignment.verse.url_ref %}">{{manuscript.short_name}}</a>
+    {% endfor %}
+
+    <h2>A Text Notes</h2>
+    {% for column in columns %}
+        <p id="atext-notes">Column {{column.order}} {{column.atext_notes|blank_if_none}}</p>
+        <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#atext-notes-modal" >Edit</button>
+    {% endfor %}
+
+
+</div>
+
+
+{% endblock content %}

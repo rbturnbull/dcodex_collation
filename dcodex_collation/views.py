@@ -1,5 +1,4 @@
-import numpy as np
-
+from collections import defaultdict
 from django.shortcuts import render
 from django.views.generic import DetailView, FormView, TemplateView, ListView
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -360,3 +359,73 @@ class ColumnDetailView(LoginRequiredMixin, DetailView):
             alignment__family=family,
             order=self.kwargs["column_rank"],
         )
+
+
+class MultiColumnDetailView(LoginRequiredMixin, TemplateView):
+    template_name = "dcodex_collation/multi_column_detail.html"
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
+
+        family_siglum = self.kwargs["family_siglum"]
+        verse_ref = self.kwargs["verse_ref"]
+
+        family = get_object_or_404(Family, name=family_siglum)
+        verse = family.get_verse_from_string(verse_ref)
+
+        alignment = Alignment.objects.filter(verse=verse, family=family).first()
+        
+        if not alignment:
+            raise Http404(f"Alignment not found for verse {verse}.")
+
+        columns = Column.objects.filter(
+            alignment__verse=verse,
+            alignment__family=family,
+            order__gte=self.kwargs["start_column_rank"],
+            order__lte=self.kwargs["end_column_rank"],
+        )
+
+        context["family"] = family
+        context["alignment"] = alignment
+        context["alignments_for_family"] = Alignment.objects.filter(family=family)
+        context["columns"] = columns
+        context["start_column"] = columns.first()
+        context["end_column"] = columns.last()
+
+        class Multistate():
+            def __init__(self, ids, text):
+                self.ids = ids
+                self.text = text
+                self.transcriptions = []
+
+            def __str__(self):
+                return self.text
+
+            def manuscript_count(self):
+                return len(self.transcriptions)
+
+
+        multistates = dict()
+        for row in alignment.row_set.all():
+            row_states = []
+            row_state_texts = []
+            for column in columns:
+                state = row.state_at(column, allow_ignore=True)
+                row_states.append(state)
+                row_state_texts.append(row.text_at(column))
+
+            states_slug = " ".join([str(state.id) for state in row_states])
+            row_state_texts = " ".join(row_state_texts)
+
+            if states_slug in multistates:
+                multistate = multistates[states_slug] 
+            else:
+                multistate = Multistate(ids=row_states, text=row_state_texts)
+                multistates[states_slug] = multistate
+            
+            multistate.transcriptions.append(row.transcription)
+
+        context["multistates"] = multistates.values()
+
+        return context    

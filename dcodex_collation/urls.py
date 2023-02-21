@@ -30,6 +30,11 @@ urlpatterns = [
         name="column_detail",
     ),
     path(
+        "alignment/<str:family_siglum>/<str:verse_ref>/<int:start_column_rank>-<int:end_column_rank>/",
+        views.MultiColumnDetailView.as_view(),
+        name="multi_column_detail",
+    ),
+    path(
         "transition/<str:family_siglum>/<str:verse_ref>/<int:column_rank>/<int:pair_rank>/",
         views.classify_transition_for_pair,
         name="classify_transition_for_pair",

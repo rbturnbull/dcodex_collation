@@ -4,6 +4,7 @@ import networkx as nx
 def variant_graph(alignment:Alignment):
     G = nx.DiGraph()
     start_node = "start"
+    G.add_node(start_node, column_id=0, column=None)
     current_nodes = {}
     for row in alignment.row_set.all():
         current_nodes[row.transcription.manuscript.siglum] = start_node
@@ -15,15 +16,16 @@ def variant_graph(alignment:Alignment):
                 continue
             current_node = current_nodes[siglum]
             new_node = f'{column.order}-{state}'
+            G.add_node(new_node, column_id=column.id, column=column)
             G.add_edge(current_node, new_node)
             current_nodes[siglum] = new_node
 
     end_node = "end"
+    G.add_node(end_node, column_id=-1, column=None)
+
     for row in alignment.row_set.all():
         current_node = current_nodes[row.transcription.manuscript.siglum]
         G.add_edge(current_node, end_node)
-
-
 
     # simplify
     edges_to_contract = []
@@ -66,7 +68,7 @@ def variant_graph(alignment:Alignment):
         # break
 
     # Remove attributes
-    for node, data in G.nodes(data=True):
-        data.clear()
+    # for node, data in G.nodes(data=True):
+    #     data.clear()
 
     return G
