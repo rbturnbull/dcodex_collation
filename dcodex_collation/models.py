@@ -128,7 +128,7 @@ def update_transcription_in_alignment(
     # Create alignment array from existing alignment
     rows = alignment.row_set.all()
     alignment_array = np.zeros(
-        (alignment.column_set.count(), rows.count()), dtype=np.int
+        (alignment.column_set.count(), rows.count()), dtype=int
     )
     for row_index, row in enumerate(rows):
         row_token_ids = row.cell_set.all().values_list("token__id", flat=True)
@@ -144,7 +144,7 @@ def update_transcription_in_alignment(
         token_id_to_index[token_id] for token_id in token_ids
     ]
     current_transcription_as_alignment = np.expand_dims(
-        np.asarray(current_transcription_indexes, dtype=np.int), axis=1
+        np.asarray(current_transcription_indexes, dtype=int), axis=1
     )
 
     # Run MSA
@@ -344,7 +344,7 @@ def align_family_at_verse(
             transcription_tokens.append(vocab[token_string])
 
         alignment = np.expand_dims(
-            np.asarray(transcription_tokens, dtype=np.int), axis=1
+            np.asarray(transcription_tokens, dtype=int), axis=1
         )
         # print(alignment)
         alignments.append(alignment)
