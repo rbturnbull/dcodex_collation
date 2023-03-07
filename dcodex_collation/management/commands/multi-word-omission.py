@@ -25,7 +25,6 @@ class Command(VersesCommandMixin, BaseCommand):
                 continue
 
             G = variant_graph(alignment)
-            breakpoint()
 
             G = nx.convert_node_labels_to_integers(G, label_attribute="label")
             
@@ -33,5 +32,4 @@ class Command(VersesCommandMixin, BaseCommand):
             for start, end, data in G.edges(data=True):
                 print(start, end, data, nodes[start], nodes[end])
                 
-                breakpoint()
 

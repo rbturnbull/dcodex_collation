@@ -965,8 +965,6 @@ class Column(NextPrevMixin, models.Model):
     def cells_with_state(self, state, allow_ignore=False):
         state_ids = [state.id]
         if allow_ignore:
-            breakpoint()
-
             # state_ids_to_keep = set()
             transition_type_ids_to_ignore = (
                 TransitionTypeToIgnore.objects.all().values_list(
