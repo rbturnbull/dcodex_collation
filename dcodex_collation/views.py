@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+import re
 
 from dcodex.models import *
 from .models import *
@@ -379,19 +380,29 @@ class MultiColumnDetailView(LoginRequiredMixin, TemplateView):
         if not alignment:
             raise Http404(f"Alignment not found for verse {verse}.")
 
+        ranks = []
+        for rank_range in self.kwargs["column_ranks"].split(","):
+            if rank_range.isdigit():
+                ranks.append(int(rank_range))
+            else:
+                m = re.match(r"(\d+)-(\d+)", rank_range)
+                if not m:
+                    raise ValueError(f"cannot understand columns {self.kwargs['column_ranks']}")
+                start_range = int(m.group(1))
+                end_range = int(m.group(2))
+                ranks.extend(list(range(start_range, end_range+1)))
+
         columns = Column.objects.filter(
             alignment__verse=verse,
             alignment__family=family,
-            order__gte=self.kwargs["start_column_rank"],
-            order__lte=self.kwargs["end_column_rank"],
+            order__in=ranks,
         )
 
         context["family"] = family
         context["alignment"] = alignment
         context["alignments_for_family"] = Alignment.objects.filter(family=family)
         context["columns"] = columns
-        context["start_column"] = columns.first()
-        context["end_column"] = columns.last()
+        context["column_ranks"] = self.kwargs["column_ranks"]
 
         class Multistate():
             def __init__(self, ids, text):

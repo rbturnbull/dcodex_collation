@@ -30,7 +30,7 @@ urlpatterns = [
         name="column_detail",
     ),
     path(
-        "alignment/<str:family_siglum>/<str:verse_ref>/<int:start_column_rank>-<int:end_column_rank>/",
+        "alignment/<str:family_siglum>/<str:verse_ref>/<str:column_ranks>/",
         views.MultiColumnDetailView.as_view(),
         name="multi_column_detail",
     ),

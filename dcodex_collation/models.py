@@ -962,8 +962,33 @@ class Column(NextPrevMixin, models.Model):
         states = list(self.states())
         return list(itertools.combinations(states, 2))
 
-    def cells_with_state(self, state):
-        return Cell.objects.filter(column=self, state=state)
+    def cells_with_state(self, state, allow_ignore=False):
+        state_ids = [state.id]
+        if allow_ignore:
+            breakpoint()
+
+            # state_ids_to_keep = set()
+            transition_type_ids_to_ignore = (
+                TransitionTypeToIgnore.objects.all().values_list(
+                    "transition_type__id", flat=True
+                )
+            )
+            transitions_to_process = Transition.objects.filter(
+                transition_type__id__in=transition_type_ids_to_ignore, column=self
+            )
+            equivalent_state_ids = set(
+                transitions_to_process.filter(
+                    start_state=state
+                ).values_list("end_state__id", flat=True)
+            ) | set(
+                transitions_to_process.filter(
+                    end_state=state
+                ).values_list("start_state__id", flat=True)
+            )
+
+            state_ids.extend(equivalent_state_ids)
+
+        return Cell.objects.filter(column=self, state__id__in=state_ids)
 
     def rows_with_state(self, state):
         cells = self.cells_with_state(state)
