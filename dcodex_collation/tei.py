@@ -6,9 +6,18 @@ from slugify import slugify
 
 ATEXT_SIGLUM = "AText"
 
+def make_nc_name(string):
+    invalid_chars = "!\"#$%&'()*+/:;<=>?@[\]^,{|}~` "
+    result = string.translate(str.maketrans(invalid_chars, '_' * len(invalid_chars)))
+    # if result[0].isdigit or result[0] in [".", "-"]:
+    #     result = "id-" + result
+
+    return result
+
 def state_slug(state):
-    slug = slugify(str(state), lowercase=False, separator='_')
+    slug = make_nc_name(str(state))
     return f"{state.id}-{slug}"
+
 
 def add_transition(transcriptional_relations, transition, rate_system, transcriptional_options):
     if rate_system:
@@ -18,7 +27,7 @@ def add_transition(transcriptional_relations, transition, rate_system, transcrip
     else:
         ana = f"#{transition.transition_type_str()}"
     
-    ana = ana.replace(" ", "_")
+    ana = make_nc_name(ana)
     transcriptional_options.add(ana[1:])
 
     return ET.SubElement(
@@ -77,7 +86,7 @@ def write_tei(
         if not alignment:
             continue
     
-        verse_slug = slugify(verse.url_ref(), lowercase=False, separator='_')
+        verse_slug = make_nc_name(verse.url_ref())
         for column in alignment.column_set.all():
             if column.only_punctuation():
                 continue
