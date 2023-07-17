@@ -16,7 +16,8 @@ django-next-prev = "^1.1.0"
 plotly = "^5.4.0"
 networkx = "^2.8.5"
 pydot = "^1.4.2"
-python-slugify = "^8.0.1"
+python-slugify = ">=5.0.2"
+rich = "^13.4.2"
 
 
 [tool.poetry.dev-dependencies]

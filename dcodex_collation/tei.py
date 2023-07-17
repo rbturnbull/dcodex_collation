@@ -2,7 +2,7 @@ import sys
 from .models import *
 import xml.etree.ElementTree as ET
 from typing import Optional
-from slugify import slugify
+from rich.progress import track
 
 ATEXT_SIGLUM = "AText"
 
@@ -81,7 +81,7 @@ def write_tei(
 
     all_sigla = set()
     
-    for verse in verses:
+    for verse in track(verses, description="Creating TEI:"):
         alignment = Alignment.objects.filter(family=family, verse=verse).first()
         if not alignment:
             continue
