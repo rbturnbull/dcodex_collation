@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 from typing import Optional
 from slugify import slugify
 
+ATEXT_SIGLUM = "AText"
+
 def state_slug(state):
     slug = slugify(str(state), lowercase=False, separator='_')
     return f"{state.id}-{slug}"
@@ -95,8 +97,8 @@ def write_tei(
                 sigla = state.cells_at(column).values_list("row__transcription__manuscript__siglum", flat=True)
                 witnesses_str = " ".join(sigla)
                 if atext and state == column.atext:
-                    witnesses_str = f"ATEXT {witnesses_str}"
-                    all_sigla.add("ATEXT")
+                    witnesses_str = f"{ATEXT_SIGLUM} {witnesses_str}"
+                    all_sigla.add(ATEXT_SIGLUM)
 
                 rdg = ET.SubElement(app, 'rdg', wit=witnesses_str, n=state_slug(state))
                 rdg.text = reading_text
@@ -131,9 +133,13 @@ def write_tei(
             if len(note):
                 app.append(note)
 
-    for siglum in sorted(all_sigla):
-        witness = ET.SubElement(listWit, 'witness', n=siglum)
-        # if dates:
+    included_mss = family.manuscripts().filter(siglum__in=all_sigla)
+    if atext:
+        witness = ET.SubElement(listWit, 'witness', n=ATEXT_SIGLUM)
+
+    for ms in included_mss:
+        witness = ET.SubElement(listWit, 'witness', n=ms.siglum)
+
         #     start, end = None, None
         #     if siglum in dates_dict:
         #         start, end = dates_dict[siglum]
