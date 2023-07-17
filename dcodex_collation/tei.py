@@ -45,7 +45,8 @@ def write_tei(
                 continue
         
             location = str(column)
-            app = ET.SubElement(body, 'app', attrib={"xml:id": location})
+            column_xmlid = f"column-{column.id}"
+            app = ET.SubElement(body, 'app', attrib={"xml:id": column_xmlid, "loc": location})
 
             states = column.states(allow_ignore=allow_ignore)
             for state in states:
@@ -78,8 +79,7 @@ def write_tei(
     ET.indent(tree, space="\t", level=0)
     string = ET.tostring(root, encoding="utf-8")
     if file:
-        with open(file, "w") as f:
-            f.write(string)
+        file.write(string.decode("utf-8"))
 
     print(string.decode("utf-8"))
 
