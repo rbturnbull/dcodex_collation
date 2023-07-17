@@ -33,10 +33,27 @@ class Command(VersesCommandMixin, BaseCommand):
             default=False,
             help="Includes the A-Text as a witness. Default False.",
         )        
+        parser.add_argument(
+            "-i",
+            "--ignore",
+            action="store_true",
+            default=False,
+            help="Whether it should ignore transisions in the TransitionsToIgnore group.",
+        )
+        parser.add_argument(
+            "-m",
+            "--multistate",
+            action="store_true",
+            default=False,
+            help="Whether it should only output variation units with multiple states.",
+        )
+        
 
     def handle(self, *args, **options):
         family, verses = self.get_family_and_verses_from_options(options)
         witnesses_in_family = family.manuscripts()
+        allow_ignore = options["ignore"]
+        multistate = options["multistate"]
 
         # Filter for witnesses that attest verses in this selection
         witness_ids = []
@@ -78,6 +95,6 @@ class Command(VersesCommandMixin, BaseCommand):
 
         if options["output"]:
             with open(options["output"], "w") as file:
-                write_tei(family, verses, witnesses, file, atext=options["atext"])
+                write_tei(family, verses, witnesses, file, atext=options["atext"], allow_ignore=allow_ignore, multistate=multistate)
         else:
-            write_tei(family, verses, witnesses, atext=options["atext"])
+            write_tei(family, verses, witnesses, atext=options["atext"], allow_ignore=allow_ignore, multistate=multistate)

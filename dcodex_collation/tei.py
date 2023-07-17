@@ -1,6 +1,31 @@
 import sys
 from .models import *
 import xml.etree.ElementTree as ET
+from typing import Optional
+from slugify import slugify
+
+def state_slug(state):
+    slug = slugify(str(state), lowercase=False, separator='_')
+    return f"{state.id}-{slug}"
+
+def add_transition(transcriptional_relations, transition, rate_system, transcriptional_options):
+    if rate_system:
+        rate = rate_system.get_transition_rate(transition=transition)
+        ana = f"#{rate}"
+        
+    else:
+        ana = f"#{transition.transition_type_str()}"
+        
+    transcriptional_options.add(ana[1:])
+
+    return ET.SubElement(
+        transcriptional_relations, 
+        'relation',
+        active=state_slug(transition.start_state), # start reading n
+        passive=state_slug(transition.end_state),
+        ana=ana, # the rate, https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.global.analytic.html
+        type=transition.transition_type_str(),
+    )
 
 
 def write_tei(
@@ -9,8 +34,11 @@ def write_tei(
     witnesses=None, 
     file=None, 
     allow_ignore=True, 
-    atext=False,
+    atext=True,
     max_readings:int=0,
+    rate_system:Optional[RateSystem]=None,
+    multistate:bool=False,
+    atext_certainty_degree:int=5,
 ):
     witnesses = witnesses or family.manuscripts()
 
@@ -30,12 +58,18 @@ def write_tei(
 
     listWit = ET.SubElement(sourceDesc, 'listWit')
 
-    body = ET.SubElement(root, 'body')
+    text_element = ET.SubElement(root, 'text')
+    interp_intrinsic = ET.SubElement(text_element, 'interpGrp', type="intrinsic")
+    interp = ET.SubElement(interp_intrinsic, 'interp', attrib={"xml:id":"AText"})
+    certainty = ET.SubElement(interp, 'certainty', degree=str(atext_certainty_degree))
+    interp_transcriptional = ET.SubElement(text_element, 'interpGrp', type="transcriptional")
+    transcriptional_options = set()
+
+    body = ET.SubElement(text_element, 'body')
 
     all_sigla = set()
     
     for verse in verses:
-        # print(verse)
         alignment = Alignment.objects.filter(family=family, verse=verse).first()
         if not alignment:
             continue
@@ -43,22 +77,61 @@ def write_tei(
         for column in alignment.column_set.all():
             if column.only_punctuation():
                 continue
-        
+
+            states = column.states(allow_ignore=allow_ignore)
+            if multistate and states.count() < 2:
+                continue
+
             location = str(column)
             column_xmlid = f"column-{column.id}"
             app = ET.SubElement(body, 'app', attrib={"xml:id": column_xmlid, "loc": location})
+            if column.atext:
+                lem = ET.SubElement(app, 'lem')
+                lem.text = str(column.atext)
 
-            states = column.states(allow_ignore=allow_ignore)
             for state in states:
                 reading_text = state.str_at(column)
                 
                 sigla = state.cells_at(column).values_list("row__transcription__manuscript__siglum", flat=True)
-                rdg = ET.SubElement(app, 'rdg', wit=" ".join(sigla))
+                witnesses_str = " ".join(sigla)
+                if atext and state == column.atext:
+                    witnesses_str = f"ATEXT {witnesses_str}"
+                    all_sigla.add("ATEXT")
+
+                rdg = ET.SubElement(app, 'rdg', wit=witnesses_str, n=state_slug(state))
                 rdg.text = reading_text
 
                 all_sigla.update(sigla)
 
-    for siglum in all_sigla:
+            
+            note = ET.Element('note')
+            if column.atext:
+                intrinsic_relations = ET.SubElement(note, 'listRelation', type="intrinsic")
+                if column.atext_notes:
+                    ET.SubElement(intrinsic_relations, 'desc').text = column.atext_notes
+                    
+                for state in states:
+                    if state != column.atext:
+                        relation = ET.SubElement(
+                            intrinsic_relations, 
+                            'relation',
+                            active=state_slug(column.atext), # start reading n
+                            passive=state_slug(state),
+                            ana="#AText",
+                        )
+                
+            # List transitions as notes with relation elements
+            transitions = column.transition_set.all()
+            if transitions.count() > 0:
+                transcriptional_relations = ET.SubElement(note, 'listRelation', attrib={"type":"transcriptional"})
+                for transition in transitions:
+                    add_transition(transcriptional_relations, transition, rate_system, transcriptional_options)
+                    add_transition(transcriptional_relations, transition.create_inverse(), rate_system, transcriptional_options)
+
+            if len(note):
+                app.append(note)
+
+    for siglum in sorted(all_sigla):
         witness = ET.SubElement(listWit, 'witness', n=siglum)
         # if dates:
         #     start, end = None, None
@@ -75,6 +148,9 @@ def write_tei(
         #         print(f"witness {siglum} not in dates")
                 # pass
         
+    for ana in transcriptional_options:
+        ET.SubElement(interp_transcriptional, 'interp', attrib={"xml:id":ana})
+
     tree = ET.ElementTree(root)
     ET.indent(tree, space="\t", level=0)
     string = ET.tostring(root, encoding="utf-8")
