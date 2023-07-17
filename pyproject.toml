@@ -17,7 +17,7 @@ plotly = "^5.4.0"
 networkx = "^2.8.5"
 pydot = "^1.4.2"
 python-slugify = ">=5.0.2"
-rich = "^13.4.2"
+rich = ">=12.2.0"
 
 
 [tool.poetry.dev-dependencies]
