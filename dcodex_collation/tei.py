@@ -22,10 +22,10 @@ def state_slug(state):
 def add_transition(transcriptional_relations, transition, rate_system, transcriptional_options):
     if rate_system:
         rate = rate_system.get_transition_rate(transition=transition)
-        ana = f"#{rate}"
+        ana = str(rate)
         
     else:
-        ana = f"#{transition.transition_type_str()}"
+        ana = transition.transition_type_str()
     
     ana = make_nc_name(ana)
     transcriptional_options.add(ana[1:])
@@ -35,7 +35,7 @@ def add_transition(transcriptional_relations, transition, rate_system, transcrip
         'relation',
         active=state_slug(transition.start_state), # start reading n
         passive=state_slug(transition.end_state),
-        ana=ana, # the rate, https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.global.analytic.html
+        ana=f"#{ana}", # the rate, https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.global.analytic.html
         type=transition.transition_type_str(),
     )
 
@@ -47,13 +47,10 @@ def write_tei(
     file=None, 
     allow_ignore=True, 
     atext=True,
-    max_readings:int=0,
     rate_system:Optional[RateSystem]=None,
     multistate:bool=False,
     atext_certainty_degree:int=5,
 ):
-    witnesses = witnesses or family.manuscripts()
-
     root = ET.Element('TEI', xmlns="http://www.tei-c.org/ns/1.0")
     teiHeader = ET.SubElement(root, 'teiHeader')
     fileDesc = ET.SubElement(teiHeader, 'fileDesc')
@@ -106,7 +103,7 @@ def write_tei(
             for state in states:
                 reading_text = state.str_at(column)
                 
-                cells = column.cells_with_state(state, allow_ignore=allow_ignore)
+                cells = column.cells_with_state(state, allow_ignore=allow_ignore).filter(row__transcription__manuscript__in=witnesses)
                 sigla = cells.values_list("row__transcription__manuscript__siglum", flat=True)
                 witnesses_str = " ".join(sigla)
                 if atext and state == column.atext:
@@ -146,7 +143,7 @@ def write_tei(
             if len(note):
                 app.append(note)
 
-    included_mss = family.manuscripts().filter(siglum__in=all_sigla)
+    included_mss = family.manuscripts().filter(siglum__in=all_sigla)    
     if atext:
         witness = ET.SubElement(listWit, 'witness', n=ATEXT_SIGLUM)
 
@@ -167,8 +164,20 @@ def write_tei(
     tree = ET.ElementTree(root)
     ET.indent(tree, space="\t", level=0)
     string = ET.tostring(root, encoding="utf-8")
-    if file:
-        file.write(string.decode("utf-8"))
 
     print(string.decode("utf-8"))
+
+    
+    if file:
+        to_close_file = False
+        if isinstance(file, (str, Path)):
+            file = open(file, "w")
+            to_close_file = True
+            
+        file.write(string.decode("utf-8"))
+
+        if to_close_file:
+            file.close()
+
+    
 
