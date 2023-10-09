@@ -45,7 +45,9 @@ class Command(VersesCommandMixin, BaseCommand):
             help="Whether it should ignore transisions in the TransitionsToIgnore group.",
         )
         parser.add_argument(
-            "exclude", type=str, nargs="+", help="The sigla for the mss to exclude from the outgroup."
+            "-x",
+            "--exclude", 
+            type=str, nargs="+", help="The sigla for the mss to exclude from the outgroup."
         )
 
 
