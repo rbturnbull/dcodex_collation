@@ -44,6 +44,10 @@ class Command(VersesCommandMixin, BaseCommand):
             default=False,
             help="Whether it should ignore transisions in the TransitionsToIgnore group.",
         )
+        parser.add_argument(
+            "exclude", type=str, nargs="+", help="The sigla for the mss to exclude from the outgroup."
+        )
+
 
     def handle(self, *args, **options):
 
@@ -55,7 +59,13 @@ class Command(VersesCommandMixin, BaseCommand):
             print("No manuscripts found.")
 
         mss_ids_in_group = [ms.id for ms in mss_in_group]
+        
+        # Make mss_in_group a queryset so that we can use it to filter
         mss_in_group = Manuscript.objects.filter(id__in=mss_ids_in_group)
+
+        outgroup_exclude = set(mss_ids_in_group)
+        if options["exclude"]:
+            outgroup_exclude.update([Manuscript.find(siglum).id for siglum in options["exclude"]])
 
         verse_class = mss_in_group[0].verse_class()
 
@@ -102,7 +112,7 @@ class Command(VersesCommandMixin, BaseCommand):
                     row__transcription__manuscript__id__in=mss_ids_in_group
                 )
                 cells_outgroup = column.cell_set.exclude(
-                    row__transcription__manuscript__id__in=mss_ids_in_group
+                    row__transcription__manuscript__id__in=outgroup_exclude
                 )
 
                 states_ingroup = State.objects.filter(cell__in=cells_ingroup).distinct()
