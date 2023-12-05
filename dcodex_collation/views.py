@@ -407,7 +407,7 @@ class MultiColumnDetailView(LoginRequiredMixin, TemplateView):
         class Multistate():
             def __init__(self, ids, text):
                 self.ids = ids
-                self.text = text
+                self.text = text if text.strip() else "OMIT"
                 self.transcriptions = []
 
             def __str__(self):
