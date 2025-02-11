@@ -30,9 +30,11 @@ class Command(VersesCommandMixin, BaseCommand):
             # nx.draw_circular(G, with_labels = True)
             # nx.draw_spectral(G, with_labels = True)
             for node, data in G.nodes(data=True):
-                data['label'] = re.sub(r"\d+\-(\D+)", r"\1", data['label'].replace("-None", "-OMIT") ).replace("+", " ")
-                # data.clear()
+                label = re.sub(r"\d+\-(\D+)", r"\1", data['label'].replace("-None", "-OMIT") ).replace("+", " ").replace(":","_")
+                data.clear()
+                data['label'] = label
             
             # nx.draw_spring(G, with_labels = True)
             # plt.show()
+            # breakpoint()
             nx.drawing.nx_pydot.write_dot(G, "variant-graph.dot")

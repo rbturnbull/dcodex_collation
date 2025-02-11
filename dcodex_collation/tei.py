@@ -40,6 +40,78 @@ def add_transition(transcriptional_relations, transition, rate_system, transcrip
     )
 
 
+def alignment_to_tei(
+    alignment, 
+    ab,
+    witnesses,
+    allow_ignore,
+    atext,
+    rate_system,
+    verse_slug,
+    transcriptional_options,
+    all_sigla,
+):
+    for column in alignment.column_set.all():
+        if column.only_punctuation():
+            continue
+
+        states = column.states(allow_ignore=allow_ignore)
+        if states.count() < 2:
+            ET.SubElement(ab, 'span').text = states.first().str_at(column)
+            continue
+
+        location = str(column)
+        column_xmlid = f"C{column.id}__{verse_slug}__{column.order}"
+        app = ET.SubElement(ab, 'app', attrib={"xml:id": column_xmlid, "loc": location})
+        atext_state = column.get_atext_state(allow_ignore)
+        if atext_state:
+            lem = ET.SubElement(app, 'lem')
+            lem.text = str(atext_state)
+
+        for state in states:
+            reading_text = state.str_at(column)
+            
+            cells = column.cells_with_state(state, allow_ignore=allow_ignore).filter(row__transcription__manuscript__in=witnesses)
+            sigla = cells.values_list("row__transcription__manuscript__siglum", flat=True)
+            witnesses_str = " ".join(sigla)
+            if atext and state == column.atext:
+                witnesses_str = f"{ATEXT_SIGLUM} {witnesses_str}"
+                all_sigla.add(ATEXT_SIGLUM)
+
+            rdg = ET.SubElement(app, 'rdg', wit=witnesses_str, n=state_slug(state))
+            rdg.text = reading_text
+
+            all_sigla.update(sigla)
+
+        
+        note = ET.Element('note')
+        if atext_state:
+            intrinsic_relations = ET.SubElement(note, 'listRelation', type="intrinsic")
+            if column.atext_notes:
+                ET.SubElement(intrinsic_relations, 'desc').text = column.atext_notes
+                
+            for state in states:
+                if state != column.atext:
+                    relation = ET.SubElement(
+                        intrinsic_relations, 
+                        'relation',
+                        active=state_slug(column.atext), # start reading n
+                        passive=state_slug(state),
+                        ana="#AText",
+                    )
+            
+        # List transitions as notes with relation elements
+        transitions = column.transition_set.all()
+        if transitions.count() > 0:
+            transcriptional_relations = ET.SubElement(note, 'listRelation', attrib={"type":"transcriptional"})
+            for transition in transitions:
+                add_transition(transcriptional_relations, transition, rate_system, transcriptional_options)
+                add_transition(transcriptional_relations, transition.create_inverse(), rate_system, transcriptional_options)
+
+        if len(note):
+            app.append(note)    
+
+
 def write_tei(
     family, 
     verses, 
@@ -79,69 +151,16 @@ def write_tei(
     all_sigla = set()
     
     for verse in track(verses, description="Creating TEI:"):
+        ab = ET.SubElement(body, 'ab', attrib={"xml:id": make_nc_name(verse.url_ref())})
+
         alignment = Alignment.objects.filter(family=family, verse=verse).first()
         if not alignment:
             continue
     
         verse_slug = make_nc_name(verse.url_ref())
-        for column in alignment.column_set.all():
-            if column.only_punctuation():
-                continue
 
-            states = column.states(allow_ignore=allow_ignore)
-            if multistate and states.count() < 2:
-                continue
+        alignment_to_tei(alignment, ab, witnesses, allow_ignore, atext, rate_system, verse_slug, transcriptional_options, all_sigla)
 
-            location = str(column)
-            column_xmlid = f"C{column.id}__{verse_slug}__{column.order}"
-            app = ET.SubElement(body, 'app', attrib={"xml:id": column_xmlid, "loc": location})
-            atext_state = column.get_atext_state(allow_ignore)
-            if atext_state:
-                lem = ET.SubElement(app, 'lem')
-                lem.text = str(atext_state)
-
-            for state in states:
-                reading_text = state.str_at(column)
-                
-                cells = column.cells_with_state(state, allow_ignore=allow_ignore).filter(row__transcription__manuscript__in=witnesses)
-                sigla = cells.values_list("row__transcription__manuscript__siglum", flat=True)
-                witnesses_str = " ".join(sigla)
-                if atext and state == column.atext:
-                    witnesses_str = f"{ATEXT_SIGLUM} {witnesses_str}"
-                    all_sigla.add(ATEXT_SIGLUM)
-
-                rdg = ET.SubElement(app, 'rdg', wit=witnesses_str, n=state_slug(state))
-                rdg.text = reading_text
-
-                all_sigla.update(sigla)
-
-            
-            note = ET.Element('note')
-            if atext_state:
-                intrinsic_relations = ET.SubElement(note, 'listRelation', type="intrinsic")
-                if column.atext_notes:
-                    ET.SubElement(intrinsic_relations, 'desc').text = column.atext_notes
-                    
-                for state in states:
-                    if state != column.atext:
-                        relation = ET.SubElement(
-                            intrinsic_relations, 
-                            'relation',
-                            active=state_slug(column.atext), # start reading n
-                            passive=state_slug(state),
-                            ana="#AText",
-                        )
-                
-            # List transitions as notes with relation elements
-            transitions = column.transition_set.all()
-            if transitions.count() > 0:
-                transcriptional_relations = ET.SubElement(note, 'listRelation', attrib={"type":"transcriptional"})
-                for transition in transitions:
-                    add_transition(transcriptional_relations, transition, rate_system, transcriptional_options)
-                    add_transition(transcriptional_relations, transition.create_inverse(), rate_system, transcriptional_options)
-
-            if len(note):
-                app.append(note)
 
     included_mss = family.manuscripts().filter(siglum__in=all_sigla)    
     if atext:
