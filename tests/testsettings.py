@@ -9,6 +9,7 @@ INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "django_extensions",
@@ -17,10 +18,13 @@ INSTALLED_APPS = [
     "mptt",
     "imagedeck",
     "polymorphic",
+    "guardian",
     "dcodex",
     "dcodex_collation",
     "tests",
 ]
+
+SITE_ID = 1
 
 TEMPLATES = [
     {
@@ -55,5 +59,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware', 
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
 
 
